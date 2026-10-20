@@ -2,6 +2,7 @@
 
 ## 1.8.1 - Correcciones de seguridad y exportación
 
+- La opción `ov_booking_version` y los metadatos de documentación reflejan 1.8.1; la versión del esquema permanece en 1.8.0.
 - La reserva pública ya no modifica ni vincula fichas de pacientes sin verificar identidad.
 - La aceptación obligatoria de términos se valida también en el servidor.
 - El listado de reservas pagina en SQL y el CSV se exporta por lotes con celdas seguras.

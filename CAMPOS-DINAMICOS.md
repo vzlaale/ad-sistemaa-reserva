@@ -1,4 +1,4 @@
-# Campos dinámicos — OV Booking 1.8.0
+# Campos dinámicos — OV Booking 1.8.1
 
 ## Campos estándar
 
@@ -23,4 +23,3 @@ exportación CSV.
 
 No uses nombres reservados del sistema para información con otro significado. No
 guardes contraseñas, tokens, datos de tarjeta ni secretos en campos personalizados.
-
