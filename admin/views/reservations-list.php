@@ -387,6 +387,9 @@ if ($view === 'calendar') {
                                     $rut = trim((string) $customer_data['rut']);
                                 }
                             }
+                            if ($rut === '' && isset($reservation->linked_patient_rut) && is_scalar($reservation->linked_patient_rut)) {
+                                $rut = trim((string) $reservation->linked_patient_rut);
+                            }
                             ?>
 
                             <?php if (!empty($rut)): ?>

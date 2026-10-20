@@ -2,7 +2,7 @@
 
 ## Sin publicar
 
-- El editor de «Todas las Reservas» muestra el RUT guardado en cada reserva como dato de solo lectura para facilitar una nueva cita.
+- El editor de «Todas las Reservas» muestra el RUT guardado en la reserva o, si falta, en su ficha de paciente vinculada, como dato de solo lectura para facilitar una nueva cita.
 
 ## 1.8.1 - Correcciones de seguridad y exportación
 
