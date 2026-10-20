@@ -43,7 +43,10 @@ $message = isset($_GET['ov_module_message']) ? sanitize_text_field(wp_unslash($_
                 <td><strong><?php echo esc_html($module['name']); ?></strong><br><code><?php echo esc_html($key); ?></code></td>
                 <td><?php echo esc_html($module['version']); ?></td>
                 <td>
-                    <?php if ($enabled) : ?>
+                    <?php if ($key !== 'core' && !$module['requires_license']) : ?>
+                        <span class="dashicons dashicons-yes-alt" style="color:#168a42"></span>
+                        <?php esc_html_e('Instalado', 'ov-booking-system'); ?>
+                    <?php elseif ($enabled) : ?>
                         <span class="dashicons dashicons-yes-alt" style="color:#168a42"></span>
                         <?php esc_html_e('Activo', 'ov-booking-system'); ?>
                     <?php else : ?>
@@ -57,6 +60,8 @@ $message = isset($_GET['ov_module_message']) ? sanitize_text_field(wp_unslash($_
                 <td>
                     <?php if ($key === 'core') : ?>
                         <em><?php esc_html_e('Incluido', 'ov-booking-system'); ?></em>
+                    <?php elseif (!$module['requires_license']) : ?>
+                        <em><?php esc_html_e('Configurar desde los ajustes del complemento', 'ov-booking-system'); ?></em>
                     <?php elseif ($enabled) : ?>
                         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                             <input type="hidden" name="action" value="ov_booking_deactivate_module">

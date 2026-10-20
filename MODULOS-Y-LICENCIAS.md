@@ -52,6 +52,8 @@ add_action('ov_booking_register_modules', function () {
 
 El add-on también debe comprobar `OV_Module_Manager::current_user_can('customers')` antes de mostrar pantallas o procesar solicitudes.
 
+Los módulos con `requires_license=false`, como WhatsApp 1.0.3, aparecen como instalados en el gestor. Su funcionamiento se controla desde los ajustes del propio add-on; la pantalla Módulos no ofrece desactivarlos. Al integrar ambos controles en una versión futura del add-on, se deberá probar la transición con instalaciones ya activas antes de cambiar esta regla.
+
 ## Eventos del núcleo
 
 Eventos disponibles para integrar módulos:

@@ -87,6 +87,7 @@ class OV_Ajax_Handler {
         add_action('wp_ajax_ov_update_reservation_status', array($this, 'update_reservation_status'));
         add_action('wp_ajax_ov_update_reservation', array($this, 'admin_update_reservation'));
         add_action('wp_ajax_ov_delete_reservation', array($this, 'admin_delete_reservation'));
+        add_action('wp_ajax_ov_preview_clear_reservations', array($this, 'admin_preview_clear_reservations'));
         add_action('wp_ajax_ov_clear_reservations', array($this, 'admin_clear_reservations'));
 
         
@@ -929,19 +930,17 @@ class OV_Ajax_Handler {
 
         // Validar que el estado es válido
         $valid_statuses = array('pending', 'confirmed', 'completed', 'cancelled');
-        if (!in_array($status, $valid_statuses)) {
+        if (!in_array($status, $valid_statuses, true)) {
             wp_send_json_error(array(
                 'message' => __('Estado inválido', 'ov-booking-system')
             ));
             return;
         }
 
-        // Actualizar estado
-        $reservation_model = new OV_Reservation();
-        $updated = $reservation_model->update($reservation_id, array(
-            'status' => $status
-        ));
-
+        $updated = $this->guarded_admin_reservation_update($reservation_id, array('status' => $status));
+        if (is_wp_error($updated)) {
+            wp_send_json_error(array('message' => $updated->get_error_message()), 409);
+        }
         if ($updated !== false) {
             wp_send_json_success(array(
                 'message' => __('Estado actualizado correctamente', 'ov-booking-system')
@@ -1028,37 +1027,55 @@ class OV_Ajax_Handler {
             $data['end_time'] = $datetime_helper->add_minutes($data['booking_time'], $duration_minutes + $buffer_minutes);
         }
 
-        $date_or_time_changed = $data['booking_date'] !== $reservation->booking_date ||
-            substr($data['booking_time'], 0, 5) !== substr($reservation->booking_time, 0, 5);
-        $lock_name = null;
-        if ($date_or_time_changed) {
-            $lock_name = $this->acquire_booking_lock((int) $reservation->form_id);
-            if (!$lock_name) {
-                wp_send_json_error(array('message' => __('El sistema está procesando otra reserva. Inténtalo nuevamente.', 'ov-booking-system')), 409);
-            }
-
-            $availability = new OV_Availability();
-            if (!$availability->is_slot_available(
-                (int) $reservation->form_id,
-                (int) $reservation->service_id,
-                $data['booking_date'],
-                substr($data['booking_time'], 0, 5),
-                !empty($reservation->professional_id) ? (int) $reservation->professional_id : null,
-                $reservation_id
-            )) {
-                $this->release_booking_lock($lock_name);
-                wp_send_json_error(array('message' => __('El nuevo horario ya no está disponible.', 'ov-booking-system')), 409);
-            }
-        }
-
-        $updated = $reservation_model->update($reservation_id, $data);
-        if ($lock_name) {
-            $this->release_booking_lock($lock_name);
+        $updated = $this->guarded_admin_reservation_update($reservation_id, $data);
+        if (is_wp_error($updated)) {
+            wp_send_json_error(array('message' => $updated->get_error_message()), 409);
         }
         if ($updated !== false) {
             wp_send_json_success(array('message' => __('Reserva actualizada correctamente', 'ov-booking-system')));
         }
         wp_send_json_error(array('message' => __('Error al actualizar la reserva', 'ov-booking-system')));
+    }
+
+    /** Serializar ediciones con la creación de reservas y revalidar cupo al ocuparlo. */
+    private function guarded_admin_reservation_update($reservation_id, $data) {
+        $model = new OV_Reservation();
+        $reservation = $model->get($reservation_id);
+        if (!$reservation) {
+            return new WP_Error('missing_reservation', __('Reserva no encontrada', 'ov-booking-system'));
+        }
+        $lock_name = $this->acquire_booking_lock((int) $reservation->form_id);
+        if (!$lock_name) {
+            return new WP_Error('booking_busy', __('El sistema está procesando otra reserva. Inténtalo nuevamente.', 'ov-booking-system'));
+        }
+        try {
+            // El estado puede haber cambiado después de la primera lectura.
+            $reservation = $model->get($reservation_id);
+            if (!$reservation) {
+                return new WP_Error('missing_reservation', __('Reserva no encontrada', 'ov-booking-system'));
+            }
+            $status = $data['status'] ?? $reservation->status;
+            $date = $data['booking_date'] ?? $reservation->booking_date;
+            $time = substr($data['booking_time'] ?? $reservation->booking_time, 0, 5);
+            $moves = $date !== $reservation->booking_date ||
+                $time !== substr($reservation->booking_time, 0, 5);
+            if ($status !== 'cancelled' && ($reservation->status === 'cancelled' || $moves)) {
+                $availability = new OV_Availability();
+                if (!$availability->is_slot_available(
+                    (int) $reservation->form_id,
+                    (int) $reservation->service_id,
+                    $date,
+                    $time,
+                    !empty($reservation->professional_id) ? (int) $reservation->professional_id : null,
+                    $reservation_id
+                )) {
+                    return new WP_Error('slot_unavailable', __('El horario ya no está disponible; la reserva no se modificó.', 'ov-booking-system'));
+                }
+            }
+            return $model->update($reservation_id, $data);
+        } finally {
+            $this->release_booking_lock($lock_name);
+        }
     }
 
     /**
@@ -1086,50 +1103,95 @@ class OV_Ajax_Handler {
         wp_send_json_error(array('message' => __('Error al eliminar la reserva', 'ov-booking-system')));
     }
 
-    /**
-     * Borrar todas las reservas visibles según formulario/estado (solo admin).
-     */
-    public function admin_clear_reservations() {
+    /** Filtros canonizados que también usa el listado. */
+    private function admin_clear_filters() {
+        $fields = array('form_id', 'status', 'professional_id', 'search');
+        $input = array();
+        foreach ($fields as $field) {
+            $value = $_POST[$field] ?? '';
+            $input[$field] = is_scalar($value) ? wp_unslash((string) $value) : '';
+        }
+        return OV_Reservation::normalize_admin_filters($input);
+    }
+
+    private function check_admin_clear_request() {
         if (!current_user_can(OV_Roles::CAPABILITY)) {
-            wp_send_json_error(array('message' => __('No tienes permisos para realizar esta acción', 'ov-booking-system')));
-            return;
+            wp_send_json_error(array('message' => __('No tienes permisos para realizar esta acción', 'ov-booking-system')), 403);
         }
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'ov_admin_nonce')) {
-            wp_send_json_error(array('message' => __('Error de seguridad', 'ov-booking-system')));
-            return;
+        $nonce = $_POST['nonce'] ?? '';
+        if (!is_scalar($nonce) || !wp_verify_nonce(wp_unslash((string) $nonce), 'ov_admin_nonce')) {
+            wp_send_json_error(array('message' => __('Error de seguridad', 'ov-booking-system')), 403);
         }
-        global $wpdb;
-        $table = $wpdb->prefix . 'ov_booking_reservations';
-        $where = '1=1';
-        $params = array();
-        if (!empty($_POST['form_id'])) {
-            $where .= ' AND form_id = %d';
-            $params[] = intval($_POST['form_id']);
+    }
+
+    private function admin_clear_fingerprint($filters, $ids) {
+        return hash('sha256', wp_json_encode($filters) . ':' . implode(',', $ids));
+    }
+
+    /** Previsualizar el conjunto completo, sin aplicar paginación. */
+    public function admin_preview_clear_reservations() {
+        $this->check_admin_clear_request();
+        $filters = $this->admin_clear_filters();
+        $ids = (new OV_Reservation())->get_admin_selection_ids($filters);
+        if ($ids === false) {
+            wp_send_json_error(array('message' => __('Error al consultar las reservas', 'ov-booking-system')), 500);
         }
-        if (!empty($_POST['status'])) {
-            $where .= ' AND status = %s';
-            $params[] = sanitize_text_field($_POST['status']);
-        }
+        $count = count($ids);
+        $form = $filters['form_id'] ? (new OV_Form())->get($filters['form_id']) : null;
+        $professional = $filters['professional_id'] > 0
+            ? (new OV_Professional())->get($filters['professional_id']) : null;
+        $scope = array(
+            sprintf(__('Formulario: %s', 'ov-booking-system'), $filters['form_id']
+                ? ($form ? $form->name : '#' . $filters['form_id'])
+                : __('todos los formularios activos', 'ov-booking-system')),
+            sprintf(__('Estado: %s', 'ov-booking-system'), $filters['status'] !== ''
+                ? $filters['status'] : __('todos', 'ov-booking-system')),
+            sprintf(__('Profesional: %s', 'ov-booking-system'), $filters['professional_id'] === -1
+                ? __('sin profesional', 'ov-booking-system')
+                : ($filters['professional_id'] > 0
+                    ? ($professional ? $professional->name : '#' . $filters['professional_id'])
+                    : __('todos', 'ov-booking-system'))),
+            sprintf(__('Búsqueda: %s', 'ov-booking-system'), $filters['search'] !== ''
+                ? $filters['search'] : __('ninguna', 'ov-booking-system')),
+        );
+        wp_send_json_success(array(
+            'count' => $count,
+            'token' => $count ? wp_create_nonce('ov_clear_selection_' . $this->admin_clear_fingerprint($filters, $ids)) : '',
+            'message' => $count
+                ? sprintf(
+                    __('Se eliminarán %d reservas de todas las páginas con estos filtros:', 'ov-booking-system'),
+                    $count
+                ) . "\n" . implode("\n", $scope) . "\n" . __('¿Deseas continuar?', 'ov-booking-system')
+                : __('No hay reservas que coincidan con los filtros.', 'ov-booking-system'),
+        ));
+    }
+
+    /** Borrar exclusivamente los ID que siguen coincidiendo con la previsualización. */
+    public function admin_clear_reservations() {
+        $this->check_admin_clear_request();
+        $filters = $this->admin_clear_filters();
         $model = new OV_Reservation();
+        $ids = $model->get_admin_selection_ids($filters);
+        if ($ids === false) {
+            wp_send_json_error(array('message' => __('Error al consultar las reservas', 'ov-booking-system')), 500);
+        }
+        $token = $_POST['selection_token'] ?? '';
+        $fingerprint = $this->admin_clear_fingerprint($filters, $ids);
+        if (!is_scalar($token) || !wp_verify_nonce(wp_unslash((string) $token), 'ov_clear_selection_' . $fingerprint)) {
+            wp_send_json_error(array('message' => __('El listado cambió. Revisa la cantidad y confirma nuevamente.', 'ov-booking-system')), 409);
+        }
         $deleted_count = 0;
         $failed_count = 0;
-        $last_id = 0;
-        do {
-            $sql = "SELECT id FROM {$table} WHERE {$where} AND id > %d ORDER BY id ASC LIMIT 200";
-            $ids = $wpdb->get_col($wpdb->prepare($sql, array_merge($params, array($last_id))));
-            if (!is_array($ids) || !empty($wpdb->last_error)) {
-                wp_send_json_error(array('message' => __('Error al consultar las reservas', 'ov-booking-system')), 500);
-            }
-            foreach ($ids as $id) {
-                $last_id = (int) $id;
+        foreach (array_chunk($ids, 200) as $batch) {
+            foreach ($batch as $id) {
                 // El modelo emite ov_booking_reservation_deleted para cada add-on.
-                if ($model->delete($last_id) === 1) {
+                if ($model->delete((int) $id) === 1) {
                     $deleted_count++;
                 } else {
                     $failed_count++;
                 }
             }
-        } while (count($ids) === 200);
+        }
         if ($failed_count) {
             wp_send_json_error(array('message' => sprintf(__('Se eliminaron %1$d reservas; %2$d no se pudieron eliminar.', 'ov-booking-system'), $deleted_count, $failed_count)), 500);
         }

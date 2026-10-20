@@ -83,8 +83,9 @@ jQuery(document).ready(function($) {
                         location.reload();
                     }
                 },
-                error: function() {
-                    alert('Error de conexión');
+                error: function(xhr) {
+                    const message = xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message;
+                    alert(message || 'Error de conexión');
                     location.reload();
                 }
             });
@@ -94,4 +95,3 @@ jQuery(document).ready(function($) {
         }
     });
 });
-

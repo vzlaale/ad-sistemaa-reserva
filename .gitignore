@@ -1,0 +1,23 @@
+# Paquetes generados para instalar el plugin.
+/dist/
+
+# Dependencias y resultados de herramientas locales.
+/vendor/
+/node_modules/
+/coverage/
+/.phpunit.cache/
+
+# Configuración local, credenciales y registros.
+.env
+.env.*
+*.log
+*.tmp
+*.bak
+
+# Archivos del editor y del sistema operativo.
+/.vscode/
+/.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

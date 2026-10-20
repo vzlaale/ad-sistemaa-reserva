@@ -87,12 +87,19 @@ Estas constataciones no prueban ausencia de vulnerabilidades en el sitio despleg
 3. Probar `cancelled → pending/confirmed` cuando otra reserva ya tomó el cupo; confirmar que se rechaza sin afectar el estado anterior.
 4. Probar borrado masivo con búsqueda, profesional, formulario inactivo y varios estados. Confirmar antes y después los IDs exactos afectados y los eventos enviados a add-ons.
 5. Instalar WhatsApp 1.0.3 con el slug correcto en staging. Simular envío exitoso, fallo de encolado, timeout incierto, reintento, confirmación, anulación, mensaje duplicado, botón vencido y edición de una cita ya notificada. Comprobar cron y outbox.
-6. Verificar que “Desactivar” en Módulos y el ajuste de WhatsApp tengan una semántica única y visible.
+6. Verificar que Módulos no ofrezca desactivar WhatsApp y que el ajuste propio de WhatsApp 1.0.3 siga controlando el envío.
 7. Probar Clientes + Historial con reservas públicas sin `patient_id`, reservas administrativas vinculadas y backfill. No activar la vinculación automática basada únicamente en datos aportados por un visitante.
 8. Medir consultas/latencia de disponibilidad mensual y exactitud de dashboard con más de 1.000 reservas por formulario.
 
-**Estado de entrega:** auditoría estática y rama `develop` preparadas; sin cambios funcionales ni pruebas de ejecución. No fusionar a `main` ni desplegar correcciones hasta completar las pruebas de staging pertinentes.
+**Estado de entrega:** las correcciones indicadas en el seguimiento están en `develop`; falta comprobarlas en WordPress staging. No fusionar a `main` ni desplegarlas hasta completar las pruebas pertinentes.
 
 ## Seguimiento de versiones en `develop`
 
-Se alinearon los títulos de `README.md`, `INSTALACION.md` y `CAMPOS-DINAMICOS.md`, el metadato del archivo POT y la opción `ov_booking_version` con la versión pública `1.8.1`. La opción se sincroniza al cargar el plugin, también en instalaciones existentes. `ov_booking_db_version` y `OV_Updater::CURRENT_VERSION` permanecen en `1.8.0` porque este cambio no modifica el esquema. El hallazgo 9 queda corregido en código, pendiente de comprobación en WordPress; los demás hallazgos siguen abiertos.
+Se alinearon los títulos de `README.md`, `INSTALACION.md` y `CAMPOS-DINAMICOS.md`, el metadato del archivo POT y la opción `ov_booking_version` con la versión pública `1.8.1`. La opción se sincroniza al cargar el plugin, también en instalaciones existentes. `ov_booking_db_version` y `OV_Updater::CURRENT_VERSION` permanecen en `1.8.0` porque este cambio no modifica el esquema. El hallazgo 9 queda corregido en código, pendiente de comprobación en WordPress.
+
+## Seguimiento de riesgos prioritarios en `develop`
+
+- Hallazgo 1: el listado y el borrado comparten filtros SQL. El borrado muestra cantidad y alcance, verifica que la selección no cambió y elimina únicamente esos ID en lotes. Pendiente de prueba en WordPress staging.
+- Hallazgo 2: ambas rutas administrativas comprueban la disponibilidad dentro del bloqueo por formulario al reactivar una reserva cancelada. Pendiente de prueba concurrente en WordPress staging.
+- Hallazgo 3: los módulos sin licencia se muestran como instalados y ya no ofrecen una desactivación ineficaz; la petición directa también se rechaza. El ajuste propio de WhatsApp 1.0.3 sigue controlando el envío. La integración de ambos controles queda para el trabajo del add-on.
+- Se añadió `.gitignore` para excluir `dist/` y archivos locales. El hallazgo 12 también queda corregido en código: el evento de borrado solo se emite cuando se eliminó una fila.

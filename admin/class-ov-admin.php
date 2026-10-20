@@ -119,7 +119,6 @@ class OV_Admin {
                     'confirm_status_change' => __('¿Estás seguro de cambiar el estado de esta reserva?', 'ov-booking-system'),
                     'confirm_export_csv' => __('¿Deseas exportar las reservas a CSV? Al aceptar comenzará la descarga del archivo.', 'ov-booking-system'),
                     'confirm_delete_reservation' => __('¿Seguro que quieres borrar esta reserva?', 'ov-booking-system'),
-                    'confirm_clear_reservations' => __('Esta acción borrará las reservas del listado actual. ¿Deseas continuar?', 'ov-booking-system'),
                     'error_save' => __('Error al guardar', 'ov-booking-system'),
                     'error_delete' => __('Error al borrar', 'ov-booking-system'),
                     'error_clear' => __('Error al limpiar', 'ov-booking-system'),

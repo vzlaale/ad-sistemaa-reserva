@@ -2,6 +2,11 @@
 
 ## Sin publicar
 
+- El borrado masivo previsualiza y verifica las reservas que coinciden con todos los filtros del listado antes de eliminar sus ID en lotes.
+- El evento de eliminación se emite solo cuando una reserva fue realmente borrada.
+- La reactivación de reservas canceladas comprueba disponibilidad dentro del bloqueo del formulario en ambas rutas de edición administrativa.
+- Módulos sin licencia ya no muestran una acción de desactivación que no afecta su funcionamiento; sus ajustes siguen controlando el add-on.
+- Se añade `.gitignore` para excluir paquetes generados y archivos locales.
 - El editor de «Todas las Reservas» muestra el RUT guardado en la reserva o en su ficha vinculada, tanto desde el listado como desde el calendario; las acciones del modal permanecen visibles en pantallas bajas.
 
 ## 1.8.1 - Correcciones de seguridad y exportación

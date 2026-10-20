@@ -252,13 +252,16 @@ class OV_Module_Manager {
     }
 
     public static function deactivate($key) {
-        if (!self::get_module($key)) {
+        $module = self::get_module($key);
+        if (!$module) {
             return new WP_Error('unknown_module', __('El módulo no está registrado.', 'ov-booking-system'));
+        }
+        if (!$module['requires_license']) {
+            return new WP_Error('module_managed_elsewhere', __('Este módulo se configura desde sus propios ajustes.', 'ov-booking-system'));
         }
 
         $result = self::set_enabled($key, array('status' => 'inactive'));
         if (!is_wp_error($result)) {
-            $module = self::get_module($key);
             if (is_callable($module['on_disable'])) {
                 call_user_func($module['on_disable']);
             }

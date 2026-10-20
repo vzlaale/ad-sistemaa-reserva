@@ -28,11 +28,21 @@ $reservation_rut = static function($reservation) {
         : '';
 };
 
-// Filtros
-$form_filter = isset($_GET['form_filter']) ? intval($_GET['form_filter']) : 0;
-$status_filter = isset($_GET['status_filter']) ? sanitize_text_field($_GET['status_filter']) : '';
-$professional_filter = isset($_GET['professional_filter']) ? intval($_GET['professional_filter']) : 0;
-$search = isset($_GET['search']) ? sanitize_text_field($_GET['search']) : '';
+// Los mismos filtros canonizados se aplican al listado y al borrado.
+$raw_filters = array();
+foreach (array('form_filter', 'status_filter', 'professional_filter', 'search') as $key) {
+    $raw_filters[$key] = isset($_GET[$key]) && is_scalar($_GET[$key]) ? wp_unslash((string) $_GET[$key]) : '';
+}
+$admin_filters = OV_Reservation::normalize_admin_filters(array(
+    'form_id' => $raw_filters['form_filter'],
+    'status' => $raw_filters['status_filter'],
+    'professional_id' => $raw_filters['professional_filter'],
+    'search' => $raw_filters['search'],
+));
+$form_filter = $admin_filters['form_id'];
+$status_filter = $admin_filters['status'];
+$professional_filter = $admin_filters['professional_id'];
+$search = $admin_filters['search'];
 $order_by = isset($_GET['order_by']) ? sanitize_text_field($_GET['order_by']) : 'created_desc';
 $per_page = isset($_GET['per_page']) ? max(1, intval($_GET['per_page'])) : 20;
 $allowed_per_page = array(20, 50, 100);
@@ -50,13 +60,7 @@ $total_reservations = 0;
 $total_pages = 1;
 $offset = 0;
 if ($view === 'list') {
-    $page_data = $reservation_model->get_admin_page(array(
-        'form_id' => $form_filter,
-        'status' => $status_filter,
-        'professional_id' => $professional_filter,
-        'search' => $search,
-        'order_by' => $order_by,
-    ), $per_page, $current_page);
+    $page_data = $reservation_model->get_admin_page(array_merge($admin_filters, array('order_by' => $order_by)), $per_page, $current_page);
     $paged_reservations = $page_data['rows'];
     $reservations = $paged_reservations;
     $total_reservations = $page_data['total'];
@@ -235,12 +239,14 @@ if ($view === 'calendar') {
             <?php _e('Exportar CSV', 'ov-booking-system'); ?>
         </a>
 
+        <?php if ($view === 'list') : ?>
         <button type="button"
                 id="ov-clear-reservations-btn"
                 class="button button-link-delete"
                 style="margin-left:10px;">
             <?php _e('Borrar reservas', 'ov-booking-system'); ?>
         </button>
+        <?php endif; ?>
     </h1>
     
     <script>
@@ -262,7 +268,7 @@ if ($view === 'calendar') {
             <input type="hidden" name="view" value="<?php echo esc_attr($view); ?>">
             
             <input type="text" name="search" placeholder="<?php _e('Buscar por nombre, email o teléfono...', 'ov-booking-system'); ?>" 
-                   value="<?php echo isset($_GET['search']) ? esc_attr($_GET['search']) : ''; ?>" 
+                   value="<?php echo esc_attr($search); ?>"
                    style="min-width: 250px;">
             
             <select name="form_filter">
@@ -285,7 +291,6 @@ if ($view === 'calendar') {
             <?php
             // Filtro de profesionales
             $all_professionals = $professional_model->get_all();
-            $professional_filter = isset($_GET['professional_filter']) ? intval($_GET['professional_filter']) : 0;
             if (!empty($all_professionals)):
             ?>
             <select name="professional_filter">
@@ -764,6 +769,8 @@ if ($view === 'calendar') {
             }).done(function(r){
                 if (r.success) location.reload();
                 else alert((r.data && r.data.message) || ovBookingAdmin.strings.error_save);
+            }).fail(function(xhr){
+                alert((xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) || ovBookingAdmin.strings.error_save);
             }).always(function(){ $btn.prop('disabled', false).text(ovBookingAdmin.strings.save_changes); });
         });
         $('.ov-delete-reservation').on('click', function(){
@@ -772,9 +779,37 @@ if ($view === 'calendar') {
              .done(function(r){ if (r.success) location.reload(); else alert((r.data && r.data.message) || ovBookingAdmin.strings.error_delete); });
         });
         $('#ov-clear-reservations-btn').on('click', function(){
-            if (!confirm(ovBookingAdmin.strings.confirm_clear_reservations)) return;
-            $.post(ajaxurl, { action:'ov_clear_reservations', nonce:ovBookingAdmin.nonce, form_id:'<?php echo esc_js($form_filter); ?>', status:'<?php echo esc_js($status_filter); ?>' })
-             .done(function(r){ if (r.success) location.reload(); else alert((r.data && r.data.message) || ovBookingAdmin.strings.error_clear); });
+            const $button = $(this).prop('disabled', true);
+            let deleting = false;
+            const filters = <?php echo wp_json_encode($admin_filters, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+            const request = Object.assign({nonce: ovBookingAdmin.nonce}, filters);
+            $.post(ajaxurl, Object.assign({action: 'ov_preview_clear_reservations'}, request))
+             .done(function(preview){
+                if (!preview.success) {
+                    alert((preview.data && preview.data.message) || ovBookingAdmin.strings.error_clear);
+                    return;
+                }
+                if (!preview.data.count || !confirm(preview.data.message)) {
+                    if (!preview.data.count) alert(preview.data.message);
+                    return;
+                }
+                deleting = true;
+                $.post(ajaxurl, Object.assign({action: 'ov_clear_reservations', selection_token: preview.data.token}, request))
+                 .done(function(result){
+                    if (result.success) location.reload();
+                    else alert((result.data && result.data.message) || ovBookingAdmin.strings.error_clear);
+                 })
+                 .fail(function(xhr){
+                    alert((xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) || ovBookingAdmin.strings.error_clear);
+                 })
+                 .always(function(){ deleting = false; $button.prop('disabled', false); });
+             })
+             .fail(function(xhr){
+                alert((xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) || ovBookingAdmin.strings.error_clear);
+             })
+             .always(function(){
+                if (!deleting) $button.prop('disabled', false);
+             });
         });
 
 
