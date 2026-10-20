@@ -24,7 +24,11 @@ class OV_Updater {
         if (version_compare($installed_version, self::CURRENT_VERSION, '<')) {
             self::run_updates($installed_version);
             update_option('ov_booking_db_version', self::CURRENT_VERSION);
-            update_option('ov_booking_version', self::CURRENT_VERSION);
+        }
+
+        // La versión publicada del plugin es independiente de la del esquema.
+        if (get_option('ov_booking_version') !== OV_BOOKING_VERSION) {
+            update_option('ov_booking_version', OV_BOOKING_VERSION);
         }
     }
     

@@ -1,5 +1,7 @@
 # Auditoría de reservas y add-ons — 19 de octubre de 2026
 
+Este informe registra los hallazgos del estado inicial del repositorio. El seguimiento de correcciones en `develop` aparece al final.
+
 ## Alcance y estado de verificación
 
 - Núcleo: commit inicial `8c60ec2`, rama `develop`, plugin declarado `1.8.1`.
@@ -90,3 +92,7 @@ Estas constataciones no prueban ausencia de vulnerabilidades en el sitio despleg
 8. Medir consultas/latencia de disponibilidad mensual y exactitud de dashboard con más de 1.000 reservas por formulario.
 
 **Estado de entrega:** auditoría estática y rama `develop` preparadas; sin cambios funcionales ni pruebas de ejecución. No fusionar a `main` ni desplegar correcciones hasta completar las pruebas de staging pertinentes.
+
+## Seguimiento de versiones en `develop`
+
+Se alinearon los títulos de `README.md`, `INSTALACION.md` y `CAMPOS-DINAMICOS.md`, el metadato del archivo POT y la opción `ov_booking_version` con la versión pública `1.8.1`. La opción se sincroniza al cargar el plugin, también en instalaciones existentes. `ov_booking_db_version` y `OV_Updater::CURRENT_VERSION` permanecen en `1.8.0` porque este cambio no modifica el esquema. El hallazgo 9 queda corregido en código, pendiente de comprobación en WordPress; los demás hallazgos siguen abiertos.

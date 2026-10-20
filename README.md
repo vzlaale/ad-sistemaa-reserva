@@ -1,4 +1,4 @@
-# OV Booking System 1.8.0
+# OV Booking System 1.8.1
 
 Plugin de reservas para WordPress, compatible con Divi y otros temas.
 
@@ -15,6 +15,9 @@ Plugin de reservas para WordPress, compatible con Divi y otros temas.
 
 Google Sheets y su Apps Script fueron retirados en 1.8.0. Una actualización conserva
 columnas históricas existentes, pero el plugin ya no las lee, escribe ni sincroniza.
+
+La versión 1.8.1 incorpora las correcciones de seguridad y exportación descritas en
+[CHANGELOG.md](CHANGELOG.md). El esquema de base de datos permanece en 1.8.0.
 
 ## Requisitos asumidos
 
@@ -60,4 +63,3 @@ Los add-ons se instalan como plugins separados y se registran mediante
 `ov_booking_before_reservation_create`; después se mantienen los eventos
 `ov_booking_reservation_created`, `ov_booking_reservation_updated` y
 `ov_booking_reservation_deleted`.
-
