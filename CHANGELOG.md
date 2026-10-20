@@ -1,5 +1,9 @@
 # Changelog
 
+## Sin publicar
+
+- El editor de «Todas las Reservas» muestra el RUT guardado en la reserva o en su ficha vinculada, tanto desde el listado como desde el calendario; las acciones del modal permanecen visibles en pantallas bajas.
+
 ## 1.8.1 - Correcciones de seguridad y exportación
 
 - La opción `ov_booking_version` y los metadatos de documentación reflejan 1.8.1; la versión del esquema permanece en 1.8.0.

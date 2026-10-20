@@ -67,21 +67,23 @@ class OV_Reservation {
     /**
      * Obtener reservas por formulario
      */
-    public function get_by_form($form_id, $status = null, $limit = null) {
-        $where = array('form_id' => $form_id);
-        
-        if ($status) {
-            $where['status'] = $status;
-        }
-        
+    public function get_by_form($form_id, $status = null, $limit = null, $include_patient_rut = false) {
         $table_name = $this->db->get_table_name('reservations');
-        $sql = "SELECT * FROM $table_name WHERE form_id = %d";
+        $sql = 'SELECT r.*';
+        if ($include_patient_rut) {
+            $patients_table = $this->db->get_table_name('patients');
+            $sql .= ", p.rut AS linked_patient_rut FROM {$table_name} r"
+                . " LEFT JOIN {$patients_table} p ON p.id = r.patient_id";
+        } else {
+            $sql .= " FROM {$table_name} r";
+        }
+        $sql .= ' WHERE r.form_id = %d';
         
         if ($status) {
-            $sql .= " AND status = %s";
+            $sql .= ' AND r.status = %s';
         }
         
-        $sql .= " ORDER BY booking_date DESC, booking_time DESC";
+        $sql .= ' ORDER BY r.booking_date DESC, r.booking_time DESC';
         
         if ($limit) {
             $sql .= " LIMIT " . intval($limit);
@@ -100,6 +102,7 @@ class OV_Reservation {
         global $wpdb;
         $table = $this->get_table_name();
         $forms = $wpdb->prefix . 'ov_booking_forms';
+        $patients = $this->db->get_table_name('patients');
         $where = array();
         $params = array();
         $form_id = (int) ($filters['form_id'] ?? 0);
@@ -128,8 +131,9 @@ class OV_Reservation {
             array_push($params, $like, $like, $like, $like);
         }
 
-        $from = " FROM {$table} r INNER JOIN {$forms} f ON f.id = r.form_id WHERE " . implode(' AND ', $where);
-        $count_sql = 'SELECT COUNT(*)' . $from;
+        $from = " FROM {$table} r INNER JOIN {$forms} f ON f.id = r.form_id";
+        $where_sql = ' WHERE ' . implode(' AND ', $where);
+        $count_sql = 'SELECT COUNT(*)' . $from . $where_sql;
         $total = (int) $wpdb->get_var($params ? $wpdb->prepare($count_sql, $params) : $count_sql);
         $per_page = max(1, min(100, (int) $per_page));
         $pages = max(1, (int) ceil($total / $per_page));
@@ -141,7 +145,9 @@ class OV_Reservation {
             'booking_desc' => 'r.booking_date DESC, r.booking_time DESC, r.id DESC',
         );
         $order = $orders[$filters['order_by'] ?? ''] ?? $orders['created_desc'];
-        $sql = 'SELECT r.*' . $from . ' ORDER BY ' . $order . ' LIMIT %d OFFSET %d';
+        $sql = 'SELECT r.*, p.rut AS linked_patient_rut' . $from
+            . " LEFT JOIN {$patients} p ON p.id = r.patient_id"
+            . $where_sql . ' ORDER BY ' . $order . ' LIMIT %d OFFSET %d';
         $query_params = array_merge($params, array($per_page, ($page - 1) * $per_page));
         $rows = $wpdb->get_results($wpdb->prepare($sql, $query_params));
         return array('rows' => is_array($rows) ? $rows : array(), 'total' => $total, 'pages' => $pages, 'page' => $page);

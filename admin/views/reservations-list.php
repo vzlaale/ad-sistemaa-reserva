@@ -12,6 +12,22 @@ $form_model = new OV_Form();
 $service_model = new OV_Service();
 $professional_model = new OV_Professional();
 
+$reservation_rut = static function($reservation) {
+    $customer_data = $reservation->customer_data ?? null;
+    if (is_string($customer_data)) {
+        $customer_data = json_decode($customer_data, true);
+    }
+    if (is_array($customer_data) && isset($customer_data['rut']) && is_scalar($customer_data['rut'])) {
+        $rut = trim((string) $customer_data['rut']);
+        if ($rut !== '') {
+            return $rut;
+        }
+    }
+    return isset($reservation->linked_patient_rut) && is_scalar($reservation->linked_patient_rut)
+        ? trim((string) $reservation->linked_patient_rut)
+        : '';
+};
+
 // Filtros
 $form_filter = isset($_GET['form_filter']) ? intval($_GET['form_filter']) : 0;
 $status_filter = isset($_GET['status_filter']) ? sanitize_text_field($_GET['status_filter']) : '';
@@ -49,10 +65,10 @@ if ($view === 'list') {
     $offset = ($current_page - 1) * $per_page;
 } else {
     if ($form_filter) {
-        $reservations = $reservation_model->get_by_form($form_filter, $status_filter ?: null, 1000);
+        $reservations = $reservation_model->get_by_form($form_filter, $status_filter ?: null, 1000, true);
     } else {
         foreach ($all_forms as $form) {
-            $reservations = array_merge($reservations, $reservation_model->get_by_form($form->id, $status_filter ?: null, 1000));
+            $reservations = array_merge($reservations, $reservation_model->get_by_form($form->id, $status_filter ?: null, 1000, true));
         }
     }
     if ($professional_filter !== 0) {
@@ -157,6 +173,7 @@ if ($view === 'calendar') {
         'borderColor' => 'transparent',
         'extendedProps' => array(
             'customerName' => $reservation->customer_name,
+            'customerRut' => $reservation_rut($reservation),
             'customerEmail' => $reservation->customer_email,
             'customerPhone' => $reservation->customer_phone,
             'serviceName' => $service ? $service->name : '',
@@ -376,17 +393,7 @@ if ($view === 'calendar') {
                             <strong><?php echo esc_html($reservation->customer_name); ?></strong>
 
                             <?php
-                            $rut = '';
-
-                            if (!empty($reservation->customer_data)) {
-                                $customer_data = is_string($reservation->customer_data)
-                                    ? json_decode($reservation->customer_data, true)
-                                    : $reservation->customer_data;
-
-                                if (is_array($customer_data) && !empty($customer_data['rut'])) {
-                                    $rut = trim($customer_data['rut']);
-                                }
-                            }
+                            $rut = $reservation_rut($reservation);
                             ?>
 
                             <?php if (!empty($rut)): ?>
@@ -485,6 +492,7 @@ if ($view === 'calendar') {
                                 class="button button-small ov-edit-reservation"
                                 data-id="<?php echo esc_attr($reservation->id); ?>"
                                 data-name="<?php echo esc_attr($reservation->customer_name); ?>"
+                                data-rut="<?php echo esc_attr($rut); ?>"
                                 data-email="<?php echo esc_attr($reservation->customer_email); ?>"
                                 data-phone="<?php echo esc_attr($reservation->customer_phone); ?>"
                                 data-date="<?php echo esc_attr($reservation->booking_date); ?>"
@@ -662,42 +670,51 @@ if ($view === 'calendar') {
         .ov-calendar-add { background: transparent; border: 0; border-radius: 4px; color: #2271b1; cursor: pointer; float: right; font-size: 11px; line-height: 24px; margin: 0; padding: 0 5px; }
         .ov-calendar-add:hover, .ov-calendar-add:focus { background: #e7f3ff; color: #135e96; outline: 1px solid #72aee6; }
         .ov-calendar-event { border: 0; border-radius: 3px; clear: both; color: #fff; cursor: pointer; display: block; font-size: 11px; line-height: 1.35; margin: 3px 0; overflow: hidden; padding: 4px 5px; text-align: left; text-overflow: ellipsis; white-space: nowrap; width: 100%; }
+        #ov-edit-reservation-modal { position: fixed; z-index: 100000; inset: 0; overflow-y: auto; padding: 16px; box-sizing: border-box; background: rgba(0,0,0,.45); }
+        .ov-edit-reservation-dialog { display: flex; flex-direction: column; box-sizing: border-box; width: 100%; max-width: 560px; max-height: calc(100vh - 32px); margin: 0 auto; overflow: hidden; background: #fff; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+        .ov-edit-reservation-fields { min-height: 0; overflow-y: auto; padding: 24px 24px 0; }
+        .ov-edit-reservation-footer { flex: none; padding: 12px 24px 24px; border-top: 1px solid #eee; background: #fff; }
         .ov-edit-modal-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; margin-bottom: 0; }
         .ov-edit-modal-actions-primary, .ov-edit-modal-actions-messaging { display: flex; flex-wrap: wrap; gap: 8px; }
         .ov-whatsapp-modal-action { color: #128c7e !important; border-color: #128c7e !important; }
-        @media (max-width: 782px) { .ov-calendar-grid { grid-template-columns: repeat(7, minmax(100px, 1fr)); } }
+        @media (max-width: 782px) { .ov-calendar-grid { grid-template-columns: repeat(7, minmax(100px, 1fr)); } .ov-edit-reservation-fields { padding: 16px 16px 0; } .ov-edit-reservation-footer { padding: 12px 16px 16px; } }
     </style>
 
-    <div id="ov-edit-reservation-modal" style="display:none; position:fixed; z-index:100000; inset:0; background:rgba(0,0,0,.45);">
-        <div style="background:#fff; max-width:560px; margin:8vh auto; padding:24px; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,.25);">
-            <h2 style="margin-top:0;"><?php _e('Editar reserva', 'ov-booking-system'); ?></h2>
-            <input type="hidden" id="ov-edit-reservation-id">
-            <p><label><?php _e('Cliente', 'ov-booking-system'); ?><br><input type="text" id="ov-edit-customer-name" class="regular-text" style="width:100%;"></label></p>
-            <p><label><?php _e('Email', 'ov-booking-system'); ?><br><input type="email" id="ov-edit-customer-email" class="regular-text" style="width:100%;"></label></p>
-            <p><label><?php _e('Teléfono', 'ov-booking-system'); ?><br><input type="text" id="ov-edit-customer-phone" class="regular-text" style="width:100%;"></label></p>
-            <div style="display:flex; gap:12px;">
-                <p style="flex:1;"><label><?php _e('Fecha', 'ov-booking-system'); ?><br><input type="date" id="ov-edit-booking-date" style="width:100%;"></label></p>
-                <p style="flex:1;"><label><?php _e('Hora', 'ov-booking-system'); ?><br><input type="time" id="ov-edit-booking-time" style="width:100%;"></label></p>
+    <div id="ov-edit-reservation-modal" style="display:none;">
+        <div class="ov-edit-reservation-dialog" role="dialog" aria-modal="true" aria-labelledby="ov-edit-reservation-title">
+            <div class="ov-edit-reservation-fields">
+                <h2 id="ov-edit-reservation-title" style="margin-top:0;"><?php _e('Editar reserva', 'ov-booking-system'); ?></h2>
+                <input type="hidden" id="ov-edit-reservation-id">
+                <p><label><?php _e('Cliente', 'ov-booking-system'); ?><br><input type="text" id="ov-edit-customer-name" class="regular-text" style="width:100%;"></label></p>
+                <p><label><?php esc_html_e('RUT', 'ov-booking-system'); ?><br><input type="text" id="ov-edit-customer-rut" class="regular-text" style="width:100%;" placeholder="<?php esc_attr_e('No registrado', 'ov-booking-system'); ?>" readonly></label></p>
+                <p><label><?php _e('Email', 'ov-booking-system'); ?><br><input type="email" id="ov-edit-customer-email" class="regular-text" style="width:100%;"></label></p>
+                <p><label><?php _e('Teléfono', 'ov-booking-system'); ?><br><input type="text" id="ov-edit-customer-phone" class="regular-text" style="width:100%;"></label></p>
+                <div style="display:flex; gap:12px;">
+                    <p style="flex:1;"><label><?php _e('Fecha', 'ov-booking-system'); ?><br><input type="date" id="ov-edit-booking-date" style="width:100%;"></label></p>
+                    <p style="flex:1;"><label><?php _e('Hora', 'ov-booking-system'); ?><br><input type="time" id="ov-edit-booking-time" style="width:100%;"></label></p>
+                </div>
+                <p><label><?php _e('Estado', 'ov-booking-system'); ?><br>
+                    <select id="ov-edit-status" style="width:100%;">
+                        <option value="pending"><?php _e('Pendiente', 'ov-booking-system'); ?></option>
+                        <option value="confirmed"><?php _e('Confirmada', 'ov-booking-system'); ?></option>
+                        <option value="completed"><?php _e('Completada', 'ov-booking-system'); ?></option>
+                        <option value="cancelled"><?php _e('Cancelada', 'ov-booking-system'); ?></option>
+                    </select>
+                </label></p>
+                <p><label><?php _e('Notas', 'ov-booking-system'); ?><br><textarea id="ov-edit-notes" rows="4" style="width:100%;"></textarea></label></p>
             </div>
-            <p><label><?php _e('Estado', 'ov-booking-system'); ?><br>
-                <select id="ov-edit-status" style="width:100%;">
-                    <option value="pending"><?php _e('Pendiente', 'ov-booking-system'); ?></option>
-                    <option value="confirmed"><?php _e('Confirmada', 'ov-booking-system'); ?></option>
-                    <option value="completed"><?php _e('Completada', 'ov-booking-system'); ?></option>
-                    <option value="cancelled"><?php _e('Cancelada', 'ov-booking-system'); ?></option>
-                </select>
-            </label></p>
-            <p><label><?php _e('Notas', 'ov-booking-system'); ?><br><textarea id="ov-edit-notes" rows="4" style="width:100%;"></textarea></label></p>
-            <p class="ov-edit-modal-actions">
-                <span class="ov-edit-modal-actions-messaging">
-                    <button type="button" class="button ov-whatsapp-modal-action" id="ov-edit-whatsapp" hidden><?php _e('WhatsApp', 'ov-booking-system'); ?></button>
-                    <button type="button" class="button ov-whatsapp-modal-action" id="ov-edit-reminder" hidden>🔔 <?php _e('Recordatorio', 'ov-booking-system'); ?></button>
-                </span>
-                <span class="ov-edit-modal-actions-primary">
-                    <button type="button" class="button" id="ov-edit-cancel"><?php _e('Cancelar', 'ov-booking-system'); ?></button>
-                    <button type="button" class="button button-primary" id="ov-edit-save"><?php _e('Guardar cambios', 'ov-booking-system'); ?></button>
-                </span>
-            </p>
+            <div class="ov-edit-reservation-footer">
+                <p class="ov-edit-modal-actions">
+                    <span class="ov-edit-modal-actions-messaging">
+                        <button type="button" class="button ov-whatsapp-modal-action" id="ov-edit-whatsapp" hidden><?php _e('WhatsApp', 'ov-booking-system'); ?></button>
+                        <button type="button" class="button ov-whatsapp-modal-action" id="ov-edit-reminder" hidden>🔔 <?php _e('Recordatorio', 'ov-booking-system'); ?></button>
+                    </span>
+                    <span class="ov-edit-modal-actions-primary">
+                        <button type="button" class="button" id="ov-edit-cancel"><?php _e('Cancelar', 'ov-booking-system'); ?></button>
+                        <button type="button" class="button button-primary" id="ov-edit-save"><?php _e('Guardar cambios', 'ov-booking-system'); ?></button>
+                    </span>
+                </p>
+            </div>
         </div>
     </div>
 
@@ -709,6 +726,7 @@ if ($view === 'calendar') {
             const $modal = $('#ov-edit-reservation-modal');
             $('#ov-edit-reservation-id').val(data.id);
             $('#ov-edit-customer-name').val(data.name);
+            $('#ov-edit-customer-rut').val(data.rut || '');
             $('#ov-edit-customer-email').val(data.email);
             $('#ov-edit-customer-phone').val(data.phone);
             $('#ov-edit-booking-date').val(data.date);
@@ -838,6 +856,7 @@ if ($view === 'calendar') {
                 dataset: {
                     id: event.id,
                     name: event.extendedProps.customerName,
+                    rut: event.extendedProps.customerRut || '',
                     email: event.extendedProps.customerEmail,
                     phone: event.extendedProps.customerPhone,
                     date: event.start.slice(0, 10),
