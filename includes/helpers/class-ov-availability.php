@@ -16,6 +16,7 @@ class OV_Availability {
     private $schedule_model;
     private $reservation_model;
     private $datetime_helper;
+    private $month_data;
 
     public function __construct() {
         $this->schedule_model = new OV_Schedule();
@@ -23,16 +24,51 @@ class OV_Availability {
         $this->datetime_helper = new OV_DateTime();
     }
 
+    /** Calcula fechas del mes con un snapshot efímero, sin cambiar la ruta diaria. */
+    public function get_month_available_dates($form, $service, $start_date, $end_date, $professional_ids) {
+        $ids = array();
+        foreach ($professional_ids as $id) {
+            if ($id !== null) {
+                $ids[] = (int) $id;
+            }
+        }
+        $this->month_data = new OV_Month_Availability_Data($form, $service, $start_date, $end_date, $ids);
+        $available_dates = array();
+        try {
+            $date = new DateTimeImmutable($start_date);
+            $last = new DateTimeImmutable($end_date);
+            for (; $date <= $last; $date = $date->modify('+1 day')) {
+                $day = $date->format('Y-m-d');
+                foreach ($professional_ids as $professional_id) {
+                    $slots = $this->get_available_slots((int) $form->id, (int) $service->id, $day, $professional_id);
+                    foreach ($slots as $slot) {
+                        if (!empty($slot['available'])) {
+                            $available_dates[] = $day;
+                            continue 3;
+                        }
+                    }
+                }
+            }
+        } finally {
+            $this->month_data = null;
+        }
+        return $available_dates;
+    }
+
     /**
      * Obtener slots disponibles para una fecha y servicio
      */
     public function get_available_slots($form_id, $service_id, $date, $professional_id = null, $exclude_reservation_id = null) {
         // Cargar configuración
-        $form_model = new OV_Form();
-        $service_model = new OV_Service();
-        
-        $this->form = $form_model->get($form_id);
-        $this->service = $service_model->get($service_id);
+        if ($this->month_data !== null) {
+            $this->form = $this->month_data->form;
+            $this->service = $this->month_data->service;
+        } else {
+            $form_model = new OV_Form();
+            $service_model = new OV_Service();
+            $this->form = $form_model->get($form_id);
+            $this->service = $service_model->get($service_id);
+        }
         $this->professional_id = $professional_id;
         $this->date = $date;
         $this->exclude_reservation_id = $exclude_reservation_id ? (int) $exclude_reservation_id : null;
@@ -138,6 +174,9 @@ class OV_Availability {
      * Verificar si es día festivo
      */
     private function is_holiday($date) {
+        if ($this->month_data !== null) {
+            return $this->month_data->is_holiday($date, $this->professional_id);
+        }
         $holidays = $this->schedule_model->get_holidays(
             $this->form->id,
             $this->professional_id
@@ -197,6 +236,9 @@ class OV_Availability {
      */
     private function get_day_schedule($date) {
         $day_of_week = $this->datetime_helper->get_day_of_week($date);
+        if ($this->month_data !== null) {
+            return $this->month_data->get_schedule($date, $day_of_week, $this->professional_id);
+        }
 
         // Primero buscar reglas especiales para esta fecha. Si existen,
         // sustituyen por completo el horario semanal normal de ese día.
@@ -351,6 +393,9 @@ class OV_Availability {
      * 2026-07-07 y 2026-07-08. El 2026-07-09 vuelve a estar libre.
      */
     private function get_day_blocking_reservations($service_id = null, $professional_id = null) {
+        if ($this->month_data !== null) {
+            return $this->month_data->get_reservations($this->date, $service_id, $professional_id, true);
+        }
         global $wpdb;
 
         $table_name = $this->reservation_model->get_table_name();
@@ -490,7 +535,7 @@ class OV_Availability {
             
             // Si hay profesional seleccionado, bloquear el horario por cualquier servicio (ocupación real del profesional)
             $service_filter = $filter_professional ? null : $this->service->id;
-            $reservations = $this->reservation_model->get_by_date(
+            $reservations = $this->get_current_reservations(
                 $this->form->id,
                 $this->date,
                 $service_filter,
@@ -498,6 +543,7 @@ class OV_Availability {
                 $this->exclude_reservation_id
             );
 
+            $month_counts = $this->month_data !== null ? $this->count_times($reservations) : array();
             foreach ($slots as &$slot) {
                 // Verificar límite de anticipación para este slot específico
                 if (!$this->meets_booking_limit_for_slot($this->date, $slot['time'])) {
@@ -507,7 +553,7 @@ class OV_Availability {
                 }
                 
                 // Contar reservas en este horario (filtrado por profesional si aplica)
-                $count = $this->reservation_model->count_bookings_in_slot(
+                $count = $this->month_data !== null ? ($month_counts[$slot['time']] ?? 0) : $this->reservation_model->count_bookings_in_slot(
                     $this->form->id,
                     $this->date,
                     $slot['time'],
@@ -538,7 +584,7 @@ class OV_Availability {
         } else {
             // MODO 2: Global (sala compartida)
             // Contar TODAS las reservas sin importar profesional
-            $reservations = $this->reservation_model->get_by_date(
+            $reservations = $this->get_current_reservations(
                 $this->form->id,
                 $this->date,
                 $this->service->id,
@@ -546,6 +592,7 @@ class OV_Availability {
                 $this->exclude_reservation_id
             );
 
+            $month_counts = $this->month_data !== null ? $this->count_times($reservations) : array();
             foreach ($slots as &$slot) {
                 // Verificar límite de anticipación para este slot específico
                 if (!$this->meets_booking_limit_for_slot($this->date, $slot['time'])) {
@@ -555,7 +602,7 @@ class OV_Availability {
                 }
                 
                 // Contar TODAS las reservas del slot (sin filtro de profesional)
-                $count = $this->reservation_model->count_bookings_in_slot(
+                $count = $this->month_data !== null ? ($month_counts[$slot['time']] ?? 0) : $this->reservation_model->count_bookings_in_slot(
                     $this->form->id,
                     $this->date,
                     $slot['time'],
@@ -602,6 +649,26 @@ class OV_Availability {
         return $slots;
     }
 
+    private function get_current_reservations($form_id, $date, $service_id, $professional_id, $exclude_id) {
+        if ($this->month_data !== null) {
+            return $this->month_data->get_reservations($date, $service_id, $professional_id);
+        }
+        return $this->reservation_model->get_by_date($form_id, $date, $service_id, $professional_id, $exclude_id);
+    }
+
+    /** MySQL TIME compara HH:MM con HH:MM:00; segundos distintos no cuentan. */
+    private function count_times($reservations) {
+        $counts = array();
+        foreach ($reservations as $reservation) {
+            $time = (string) $reservation->booking_time;
+            if (strlen($time) === 8 && substr($time, 5) === ':00') {
+                $key = substr($time, 0, 5);
+                $counts[$key] = ($counts[$key] ?? 0) + 1;
+            }
+        }
+        return $counts;
+    }
+
     /**
      * Verificar si dos slots se solapan
      */
@@ -638,13 +705,16 @@ class OV_Availability {
      */
     private function filter_breaks($slots) {
         $day_of_week = $this->datetime_helper->get_day_of_week($this->date);
-        
-        $breaks = $this->schedule_model->get_breaks(
+        if ($this->month_data !== null) {
+            $breaks = $this->month_data->get_breaks($this->date, $day_of_week, $this->professional_id);
+        } else {
+            $breaks = $this->schedule_model->get_breaks(
             $this->form->id,
             $this->professional_id,
             $this->date,
             $day_of_week
         );
+        }
 
         foreach ($slots as &$slot) {
             foreach ($breaks as $break) {

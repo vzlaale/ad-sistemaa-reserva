@@ -1,4 +1,4 @@
-# OV Booking System 1.8.3
+# OV Booking System 1.8.4
 
 Plugin de reservas para WordPress, compatible con Divi y otros temas.
 
@@ -20,6 +20,7 @@ La versión 1.8.2 añade la consulta del RUT en reservas administrativas y corri
 borrado masivo y la reactivación de reservas canceladas. Consulta [CHANGELOG.md](CHANGELOG.md).
 La versión 1.8.3 acota las reservas públicas a seis meses calendario y limita las consultas
 mensuales anónimas. El calendario usa la zona horaria configurada del formulario.
+La versión 1.8.4 precarga los datos de cada consulta mensual y evita las consultas por horario.
 El esquema de base de datos permanece en 1.8.0.
 
 ## Requisitos asumidos

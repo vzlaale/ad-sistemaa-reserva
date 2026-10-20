@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.8.4 - En pruebas, pendiente de publicación
+
+- La disponibilidad mensual precarga horarios, excepciones, festivos, descansos y reservas una vez por solicitud.
+- Los conteos por horario del calendario se calculan con los datos precargados; la consulta diaria y la validación al reservar mantienen su ruta actual.
+- Sin caché persistente ni cambios de esquema: `ov_booking_db_version` permanece en `1.8.0`.
+
 ## 1.8.3 - En pruebas, pendiente de publicación
 
 - La disponibilidad y la reserva públicas aceptan el mes actual y los cinco siguientes según la zona horaria del formulario.
