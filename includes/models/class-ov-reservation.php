@@ -97,34 +97,46 @@ class OV_Reservation {
         }
     }
 
-    /** Consulta paginada para el listado administrativo, con filtros en SQL. */
-    public function get_admin_page($filters, $per_page, $page) {
+    /** Normalizar los filtros que comparten el listado y el borrado. */
+    public static function normalize_admin_filters($filters) {
+        $status = sanitize_key($filters['status'] ?? '');
+        $professional_id = (int) ($filters['professional_id'] ?? 0);
+        return array(
+            'form_id' => max(0, (int) ($filters['form_id'] ?? 0)),
+            'status' => in_array($status, self::ALLOWED_STATUSES, true) ? $status : '',
+            'professional_id' => $professional_id === -1 || $professional_id > 0 ? $professional_id : 0,
+            'search' => sanitize_text_field((string) ($filters['search'] ?? '')),
+        );
+    }
+
+    /** Una sola definición SQL del alcance administrativo. */
+    private function admin_query_parts($filters) {
         global $wpdb;
         $table = $this->get_table_name();
         $forms = $wpdb->prefix . 'ov_booking_forms';
-        $patients = $this->db->get_table_name('patients');
+        $filters = self::normalize_admin_filters($filters);
         $where = array();
         $params = array();
-        $form_id = (int) ($filters['form_id'] ?? 0);
+        $form_id = $filters['form_id'];
         if ($form_id > 0) {
             $where[] = 'r.form_id = %d';
             $params[] = $form_id;
         } else {
             $where[] = "f.status = 'active'";
         }
-        $status = (string) ($filters['status'] ?? '');
-        if ($status !== '' && in_array($status, self::ALLOWED_STATUSES, true)) {
+        $status = $filters['status'];
+        if ($status !== '') {
             $where[] = 'r.status = %s';
             $params[] = $status;
         }
-        $professional_id = (int) ($filters['professional_id'] ?? 0);
+        $professional_id = $filters['professional_id'];
         if ($professional_id === -1) {
             $where[] = '(r.professional_id IS NULL OR r.professional_id = 0)';
         } elseif ($professional_id > 0) {
             $where[] = 'r.professional_id = %d';
             $params[] = $professional_id;
         }
-        $search = (string) ($filters['search'] ?? '');
+        $search = $filters['search'];
         if ($search !== '') {
             $like = '%' . $wpdb->esc_like($search) . '%';
             $where[] = '(r.customer_name LIKE %s OR r.customer_email LIKE %s OR r.customer_phone LIKE %s OR r.booking_id LIKE %s)';
@@ -133,6 +145,42 @@ class OV_Reservation {
 
         $from = " FROM {$table} r INNER JOIN {$forms} f ON f.id = r.form_id";
         $where_sql = ' WHERE ' . implode(' AND ', $where);
+        return array($from, $where_sql, $params);
+    }
+
+    /** Huella de los ID filtrados; la función opcional recibe cada ID sin cargar toda la selección. */
+    public function scan_admin_selection($filters, $on_id = null) {
+        global $wpdb;
+        $filters = self::normalize_admin_filters($filters);
+        list($from, $where_sql, $params) = $this->admin_query_parts($filters);
+        $context = hash_init('sha256');
+        hash_update($context, wp_json_encode($filters) . ':');
+        $count = 0;
+        $last_id = 0;
+        do {
+            $sql = 'SELECT r.id' . $from . $where_sql
+                . ' AND r.id > %d ORDER BY r.id ASC LIMIT 500';
+            $ids = $wpdb->get_col($wpdb->prepare($sql, array_merge($params, array($last_id))));
+            if (!is_array($ids) || $wpdb->last_error !== '') {
+                return false;
+            }
+            foreach ($ids as $id) {
+                $last_id = (int) $id;
+                hash_update($context, ($count ? ',' : '') . $last_id);
+                if ($on_id !== null && $on_id($last_id) === false) {
+                    return false;
+                }
+                $count++;
+            }
+        } while (count($ids) === 500);
+        return array('count' => $count, 'fingerprint' => hash_final($context));
+    }
+
+    /** Consulta paginada para el listado administrativo, con filtros en SQL. */
+    public function get_admin_page($filters, $per_page, $page) {
+        global $wpdb;
+        $patients = $this->db->get_table_name('patients');
+        list($from, $where_sql, $params) = $this->admin_query_parts($filters);
         $count_sql = 'SELECT COUNT(*)' . $from . $where_sql;
         $total = (int) $wpdb->get_var($params ? $wpdb->prepare($count_sql, $params) : $count_sql);
         $per_page = max(1, min(100, (int) $per_page));
@@ -353,7 +401,7 @@ class OV_Reservation {
     public function delete($id) {
         $result = $this->db->delete('reservations', array('id' => $id));
 
-        if ($result !== false) {
+        if ($result === 1) {
             do_action('ov_booking_reservation_deleted', (int) $id);
         }
 
