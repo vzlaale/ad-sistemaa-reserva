@@ -107,15 +107,16 @@ echo $custom_css;
             
             <div class="ov-calendar-container">
                 <div class="ov-calendar-header">
-                    <button type="button" class="ov-btn ov-btn-icon" id="ov-prev-month">
+                    <button type="button" class="ov-btn ov-btn-icon" id="ov-prev-month" aria-label="<?php esc_attr_e('Mes anterior', 'ov-booking-system'); ?>">
                         <i class="fas fa-chevron-left"></i>
                     </button>
                     <h3 id="ov-current-month"></h3>
-                    <button type="button" class="ov-btn ov-btn-icon" id="ov-next-month">
+                    <button type="button" class="ov-btn ov-btn-icon" id="ov-next-month" aria-label="<?php esc_attr_e('Mes siguiente', 'ov-booking-system'); ?>">
                         <i class="fas fa-chevron-right"></i>
                     </button>
                 </div>
                 <div class="ov-calendar-grid" id="ov-calendar-grid"></div>
+                <div class="ov-calendar-status" id="ov-calendar-status" role="status" aria-live="polite"></div>
             </div>
 
             <div class="ov-time-slots-container" id="ov-time-slots" style="display: none;">

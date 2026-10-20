@@ -47,6 +47,68 @@ class OV_Ajax_Handler {
         }
     }
 
+    /**
+     * Ventana pública: hoy y los seis meses calendario, incluido el actual.
+     */
+    private function get_public_booking_window($form) {
+        $timezone = new DateTimeZone($this->get_form_timezone($form));
+        $today = new DateTimeImmutable('today', $timezone);
+        $last_day = $today->modify('first day of this month')->modify('+5 months')->modify('last day of this month');
+
+        return array(
+            'start_date' => $today->format('Y-m-d'),
+            'end_date' => $last_day->format('Y-m-d'),
+            'start_month' => $today->format('Y-m'),
+            'end_month' => $last_day->format('Y-m'),
+        );
+    }
+
+    private function is_valid_public_date($date, $form) {
+        if (!is_string($date) || strlen($date) !== 10 || !preg_match('/^\d{4}-\d{2}-\d{2}$/D', $date)) {
+            return false;
+        }
+        list($year, $month, $day) = array_map('intval', explode('-', $date));
+        if (!checkdate($month, $day, $year)) {
+            return false;
+        }
+
+        $window = $this->get_public_booking_window($form);
+        return $date >= $window['start_date'] && $date <= $window['end_date'];
+    }
+
+    /** Rechazar arrays, valores truncados por intval y enteros fuera de rango. */
+    private function parse_public_integer($raw, $allow_zero = false) {
+        if (!is_string($raw) && !is_int($raw)) {
+            return false;
+        }
+        $value = is_string($raw) ? wp_unslash($raw) : (string) $raw;
+        if (strlen($value) > strlen((string) PHP_INT_MAX) ||
+            !preg_match($allow_zero ? '/^(0|[1-9][0-9]*)$/D' : '/^[1-9][0-9]*$/D', $value)) {
+            return false;
+        }
+        return filter_var($value, FILTER_VALIDATE_INT, array(
+            'options' => array('min_range' => $allow_zero ? 0 : 1),
+        ));
+    }
+
+    private function get_public_availability_form($form_id, $service_id, $professional_id) {
+        $form = (new OV_Form())->get($form_id);
+        $service = (new OV_Service())->get($service_id);
+        if (!$form || $form->status !== 'active' || !$service || empty($service->active) || (int) $service->form_id !== $form_id) {
+            return false;
+        }
+        if (empty($form->enable_professionals)) {
+            return $professional_id === null ? $form : false;
+        }
+        if ($professional_id === 0) {
+            return !empty($form->allow_any_professional) ? $form : false;
+        }
+        if (!$professional_id || !(new OV_Professional())->is_public_for_service($professional_id, $service_id, $form_id)) {
+            return false;
+        }
+        return $form;
+    }
+
 
     public function __construct() {
         // No hacer nada en el constructor
@@ -227,24 +289,26 @@ class OV_Ajax_Handler {
      */
     public function get_available_slots() {
         try {
-            $form_id = isset($_REQUEST['form_id']) ? intval($_REQUEST['form_id']) : 0;
-            $service_id = isset($_REQUEST['service_id']) ? intval($_REQUEST['service_id']) : 0;
-            $date = isset($_REQUEST['date']) ? sanitize_text_field($_REQUEST['date']) : '';
-            
-            // Manejar professional_id:
-            // - Si no se envía o es vacío string → NULL (sin profesionales habilitados)
-            // - Si es "0" o 0 → 0 (cualquier profesional)
-            // - Si es > 0 → ese profesional específico
+            $form_id = $this->parse_public_integer($_REQUEST['form_id'] ?? null);
+            $service_id = $this->parse_public_integer($_REQUEST['service_id'] ?? null);
+            $raw_date = $_REQUEST['date'] ?? null;
+            $date = is_string($raw_date) ? wp_unslash($raw_date) : '';
+
             $professional_id = null;
             if (isset($_REQUEST['professional_id']) && $_REQUEST['professional_id'] !== '') {
-                $professional_id = intval($_REQUEST['professional_id']);
+                $professional_id = $this->parse_public_integer($_REQUEST['professional_id'], true);
             }
 
-            if (!$form_id || !$service_id || !$date) {
+            if ($form_id === false || $service_id === false || $professional_id === false) {
                 wp_send_json_error(array(
-                    'message' => __('Datos incompletos', 'ov-booking-system')
-                ));
-                return;
+                    'message' => __('Formulario, servicio, profesional o fecha no válidos.', 'ov-booking-system')
+                ), 400);
+            }
+            $form = $this->get_public_availability_form($form_id, $service_id, $professional_id);
+            if (!$form || !$this->is_valid_public_date($date, $form)) {
+                wp_send_json_error(array(
+                    'message' => __('Formulario, servicio, profesional o fecha no válidos.', 'ov-booking-system')
+                ), 400);
             }
 
             $availability = new OV_Availability();
@@ -325,22 +389,46 @@ class OV_Ajax_Handler {
 
     public function get_month_availability() {
         try {
-            $form_id = isset($_REQUEST['form_id']) ? intval($_REQUEST['form_id']) : 0;
-            $service_id = isset($_REQUEST['service_id']) ? intval($_REQUEST['service_id']) : 0;
-            $year = isset($_REQUEST['year']) ? intval($_REQUEST['year']) : 0;
-            $month = isset($_REQUEST['month']) ? intval($_REQUEST['month']) : 0; // 1-12
-
-            // Manejar professional_id igual que en otros endpoints
+            $form_id = $this->parse_public_integer($_REQUEST['form_id'] ?? null);
+            $service_id = $this->parse_public_integer($_REQUEST['service_id'] ?? null);
+            $raw_year = $_REQUEST['year'] ?? null;
+            $raw_month = $_REQUEST['month'] ?? null;
+            $year_text = is_string($raw_year) ? wp_unslash($raw_year) : (is_int($raw_year) ? (string) $raw_year : '');
+            $month_text = is_string($raw_month) ? wp_unslash($raw_month) : (is_int($raw_month) ? (string) $raw_month : '');
             $professional_id = null;
             if (isset($_REQUEST['professional_id']) && $_REQUEST['professional_id'] !== '') {
-                $professional_id = intval($_REQUEST['professional_id']);
+                $professional_id = $this->parse_public_integer($_REQUEST['professional_id'], true);
             }
 
-            if (!$form_id || !$service_id || !$year || !$month || $month < 1 || $month > 12) {
+            if ($form_id === false || $service_id === false || $professional_id === false ||
+                strlen($year_text) !== 4 || strlen($month_text) > 2 ||
+                !preg_match('/^[1-9][0-9]{3}$/D', $year_text) ||
+                !preg_match('/^(?:[1-9]|1[0-2])$/D', $month_text)) {
                 wp_send_json_error(array(
-                    'message' => __('Datos incompletos', 'ov-booking-system')
-                ));
-                return;
+                    'message' => __('Parámetros de calendario no válidos.', 'ov-booking-system')
+                ), 400);
+            }
+
+            $year = (int) $year_text;
+            $month = (int) $month_text;
+            $form = $this->get_public_availability_form($form_id, $service_id, $professional_id);
+            if (!$form) {
+                wp_send_json_error(array('message' => __('Calendario no disponible.', 'ov-booking-system')), 400);
+            }
+            $window = $this->get_public_booking_window($form);
+            $requested_month = sprintf('%04d-%02d', $year, $month);
+            if ($requested_month < $window['start_month'] || $requested_month > $window['end_month']) {
+                wp_send_json_error(array('message' => __('Mes fuera del período reservable.', 'ov-booking-system')), 400);
+            }
+
+            if (!is_user_logged_in()) {
+                $attempts = $this->increment_rate_limit('month_availability_ip', $this->get_request_ip_hash(), 600);
+                if ($attempts === false) {
+                    wp_send_json_error(array('message' => __('No fue posible consultar el calendario. Inténtalo nuevamente.', 'ov-booking-system')), 503);
+                }
+                if ($attempts > 60) {
+                    wp_send_json_error(array('message' => __('Demasiadas consultas al calendario. Espera unos minutos.', 'ov-booking-system')), 429);
+                }
             }
 
             // Nota: no usamos cache aquí para que los cupos disponibles se actualicen
@@ -351,11 +439,12 @@ class OV_Ajax_Handler {
             // Si es "cualquier profesional", obtener lista una vez para evaluar disponibilidad por día
             $any_pros = array();
             if ($professional_id === 0) {
-                $form_model = new OV_Form();
-                $form = $form_model->get($form_id);
                 if ($form && !empty($form->enable_professionals) && (!isset($form->allow_any_professional) || $form->allow_any_professional)) {
                     $professional_model = new OV_Professional();
                     $any_pros = $professional_model->get_by_service($service_id, true, true);
+                }
+                if (empty($any_pros)) {
+                    wp_send_json_success(array('available_dates' => array()));
                 }
             }
 
@@ -367,6 +456,9 @@ class OV_Ajax_Handler {
 
             for ($day = 1; $day <= $days_in_month; $day++) {
                 $date = sprintf('%04d-%02d-%02d', $year, $month, $day);
+                if ($date < $window['start_date']) {
+                    continue;
+                }
 
                 // Reusar tu lógica real: si devuelve slots disponibles -> ese día sí se habilita
                 // Si professional_id = 0, el día es válido si ALGÚN profesional tiene al menos 1 slot disponible
@@ -486,8 +578,12 @@ class OV_Ajax_Handler {
             }
 
             // Obtener datos
-            $form_id = isset($_POST['form_id']) ? intval($_POST['form_id']) : 0;
-            $service_id = isset($_POST['service_id']) ? intval($_POST['service_id']) : 0;
+            $form_id = $is_admin_request
+                ? (isset($_POST['form_id']) ? intval($_POST['form_id']) : 0)
+                : $this->parse_public_integer($_POST['form_id'] ?? null);
+            $service_id = $is_admin_request
+                ? (isset($_POST['service_id']) ? intval($_POST['service_id']) : 0)
+                : $this->parse_public_integer($_POST['service_id'] ?? null);
             
             // Manejar professional_id:
             // - Si no se envía o está vacío string → NULL (sin profesionales habilitados)
@@ -495,7 +591,12 @@ class OV_Ajax_Handler {
             // - Si es > 0 → ese profesional específico
             $professional_id = null;
             if (isset($_POST['professional_id']) && $_POST['professional_id'] !== '') {
-                $professional_id = intval($_POST['professional_id']);
+                $professional_id = $is_admin_request
+                    ? intval($_POST['professional_id'])
+                    : $this->parse_public_integer($_POST['professional_id'], true);
+            }
+            if (!$is_admin_request && ($form_id === false || $service_id === false || $professional_id === false)) {
+                wp_send_json_error(array('message' => __('Formulario, servicio o profesional no válidos.', 'ov-booking-system')), 400);
             }
 
             // La visibilidad pública se valida en servidor. Ocultar el nombre
@@ -505,12 +606,12 @@ class OV_Ajax_Handler {
                 if (!$professional_model->is_public_for_service($professional_id, $service_id, $form_id)) {
                     wp_send_json_error(array(
                         'message' => __('El profesional seleccionado no está disponible para reservas públicas.', 'ov-booking-system')
-                    ));
-                    return;
+                    ), 400);
                 }
             }
-            
-            $date = isset($_POST['date']) ? sanitize_text_field($_POST['date']) : '';
+
+            $raw_date = $_POST['date'] ?? null;
+            $date = is_string($raw_date) ? sanitize_text_field(wp_unslash($raw_date)) : '';
             $time = isset($_POST['time']) ? sanitize_text_field($_POST['time']) : '';
             $customer_data = isset($_POST['customer_data']) && is_array($_POST['customer_data'])
                 ? wp_unslash($_POST['customer_data'])
@@ -519,6 +620,9 @@ class OV_Ajax_Handler {
             // Comprobar también en los reintentos idempotentes: el navegador
             // no puede decidir por sí mismo si los términos son obligatorios.
             $booking_form = (new OV_Form())->get($form_id);
+            if (!$is_admin_request && (!$booking_form || !$this->is_valid_public_date($date, $booking_form))) {
+                wp_send_json_error(array('message' => __('Fecha fuera del período reservable o no válida.', 'ov-booking-system')), 400);
+            }
             $terms = is_array($booking_form->terms_config ?? null) ? $booking_form->terms_config : array();
             if (!$is_admin_request && !empty($terms['required']) &&
                 (!empty($terms['url']) || !empty($terms['text'])) &&
@@ -554,8 +658,7 @@ class OV_Ajax_Handler {
             }
 
             if (!$this->valid_booking_context($form_id, $service_id, $professional_id, $date, !$is_admin_request)) {
-                wp_send_json_error(array('message' => __('Revisa el formulario, servicio, profesional y fecha seleccionados.', 'ov-booking-system')));
-                return;
+                wp_send_json_error(array('message' => __('Revisa el formulario, servicio, profesional y fecha seleccionados.', 'ov-booking-system')), $is_admin_request ? 200 : 400);
             }
 
             // Validar datos básicos
@@ -613,6 +716,12 @@ class OV_Ajax_Handler {
                     $lock_name = null;
                     $this->send_booking_success($existing);
                 }
+            }
+
+            if (!$is_admin_request && !$this->valid_booking_context($form_id, $service_id, $professional_id, $date, true)) {
+                $this->release_booking_lock($lock_name);
+                $lock_name = null;
+                wp_send_json_error(array('message' => __('Fecha o contexto de reserva no válidos.', 'ov-booking-system')), 400);
             }
 
             // Si se seleccionó "cualquier profesional", asignar uno automáticamente
@@ -833,23 +942,21 @@ class OV_Ajax_Handler {
      */
     public function get_form_config() {
         try {
-            $form_id = isset($_REQUEST['form_id']) ? intval($_REQUEST['form_id']) : 0;
+            $form_id = $this->parse_public_integer($_REQUEST['form_id'] ?? null);
 
-            if (!$form_id) {
+            if ($form_id === false) {
                 wp_send_json_error(array(
                     'message' => __('ID de formulario no válido', 'ov-booking-system')
-                ));
-                return;
+                ), 400);
             }
 
             $form_model = new OV_Form();
             $form = $form_model->get($form_id);
 
-            if (!$form) {
+            if (!$form || $form->status !== 'active') {
                 wp_send_json_error(array(
                     'message' => __('Formulario no encontrado', 'ov-booking-system')
-                ));
-                return;
+                ), 404);
             }
 
             // Obtener días festivos
@@ -886,6 +993,7 @@ class OV_Ajax_Handler {
                 'colors' => $form->colors_config,
                 'timezone' => $form->timezone,
                 'booking_limit_hours' => (int) $form->booking_limit_hours,
+                'booking_window' => $this->get_public_booking_window($form),
                 'week_starts_on' => (int) $form->week_starts_on,
                 'working_days' => $working_days,
                 'holidays' => $holidays,
@@ -1294,6 +1402,9 @@ class OV_Ajax_Handler {
             }
         }
 
+        if ($public_request) {
+            return $this->is_valid_public_date($date, $form);
+        }
         $now = (new OV_DateTime())->get_current_datetime($form->timezone);
         return $date >= $now->format('Y-m-d');
     }
@@ -1399,10 +1510,11 @@ class OV_Ajax_Handler {
             $wpdb->query("DELETE FROM {$table} WHERE window_expires < (UTC_TIMESTAMP() - INTERVAL 1 DAY)");
         }
 
-        return (int) $wpdb->get_var($wpdb->prepare(
+        $attempts = $wpdb->get_var($wpdb->prepare(
             "SELECT attempts FROM {$table} WHERE rate_key = %s",
             $rate_key
         ));
+        return ($attempts === null || $attempts === false) ? false : (int) $attempts;
     }
 
     /**
