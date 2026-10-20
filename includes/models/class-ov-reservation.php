@@ -67,21 +67,23 @@ class OV_Reservation {
     /**
      * Obtener reservas por formulario
      */
-    public function get_by_form($form_id, $status = null, $limit = null) {
-        $where = array('form_id' => $form_id);
-        
-        if ($status) {
-            $where['status'] = $status;
-        }
-        
+    public function get_by_form($form_id, $status = null, $limit = null, $include_patient_rut = false) {
         $table_name = $this->db->get_table_name('reservations');
-        $sql = "SELECT * FROM $table_name WHERE form_id = %d";
+        $sql = 'SELECT r.*';
+        if ($include_patient_rut) {
+            $patients_table = $this->db->get_table_name('patients');
+            $sql .= ", p.rut AS linked_patient_rut FROM {$table_name} r"
+                . " LEFT JOIN {$patients_table} p ON p.id = r.patient_id";
+        } else {
+            $sql .= " FROM {$table_name} r";
+        }
+        $sql .= ' WHERE r.form_id = %d';
         
         if ($status) {
-            $sql .= " AND status = %s";
+            $sql .= ' AND r.status = %s';
         }
         
-        $sql .= " ORDER BY booking_date DESC, booking_time DESC";
+        $sql .= ' ORDER BY r.booking_date DESC, r.booking_time DESC';
         
         if ($limit) {
             $sql .= " LIMIT " . intval($limit);
