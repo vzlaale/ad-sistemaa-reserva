@@ -1,0 +1,1633 @@
+/**
+ * OV Booking System v2.0 - Modern Professional Design
+ * Inspirado en Amelia, Calendly y diseños modernos 2025
+ */
+
+/* ===== RESET ===== */
+.ov-booking-container *,
+.ov-booking-container *::before,
+.ov-booking-container *::after {
+    box-sizing: border-box !important;
+    margin: 0;
+    padding: 0;
+}
+
+/* ===== VARIABLES ===== */
+.ov-booking-container,
+.ov-modal-overlay {
+    /* Variables estáticas (fallback) */
+    --ov-bs-primary: #6366f1;
+    --ov-bs-primary-hover: #4f46e5;
+    --ov-bs-success: #10b981;
+    --ov-bs-warning: #f39c12;
+    --ov-bs-error: #d63031;
+    --ov-bs-text-dark: #1f2937;
+    --ov-bs-text-medium: #6b7280;
+    --ov-bs-text-light: #9ca3af;
+    --ov-bs-border: #e5e7eb;
+    --ov-bs-bg-light: #f9fafb;
+    --ov-bs-bg-white: #ffffff;
+    --ov-bs-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --ov-bs-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    --ov-bs-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    --ov-bs-radius: 12px;
+    --ov-bs-radius-sm: 8px;
+    
+    /* Variables dinámicas con fallback */
+    --ov-bs-primary-final: var(--ov-bs-primary-color, var(--ov-bs-primary));
+    --ov-bs-secondary-final: var(--ov-bs-secondary-color, var(--ov-bs-secondary-color));
+    --ov-bs-success-final: var(--ov-bs-success-color, var(--ov-bs-success));
+    --ov-bs-warning-final: var(--ov-bs-warning-color, var(--ov-bs-warning));
+    --ov-bs-error-final: var(--ov-bs-error-color, var(--ov-bs-error));
+    --ov-bs-text-final: var(--ov-bs-text-color, var(--ov-bs-text-dark));
+}
+
+/* ===== CONTENEDOR PRINCIPAL ===== */
+.ov-booking-container {
+    max-width: 1000px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    color: var(--ov-bs-text-final);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== PROGRESS BAR ===== */
+.ov-progress-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 2rem 0 2.5rem;
+    margin: 0 auto;
+    max-width: 600px;
+    position: relative;
+}
+
+.ov-progress-bar::before {
+    content: '';
+    position: absolute;
+    top: 3.3rem;
+    left: 50px;
+    right: 50px;
+    height: 2px;
+    background: var(--ov-bs-border);
+    z-index: 0;
+}
+
+.ov-progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    position: relative;
+    z-index: 1;
+}
+
+.ov-step-number {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: var(--ov-bs-bg-white);
+    border: 2px solid var(--ov-bs-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--ov-bs-text-final);
+    transition: all 0.2s;
+}
+
+.ov-progress-step.ov-active .ov-step-number,
+.ov-progress-step.ov-completed .ov-step-number {
+    background: var(--ov-bs-primary-final);
+    border-color: var(--ov-bs-primary-final);
+    color: white;
+}
+
+.ov-step-label {
+    font-size: 0.75rem;
+    color: var(--ov-bs-text-final);
+    font-weight: 500;
+    text-align: center;
+    max-width: 80px;
+}
+
+.ov-progress-step.ov-active .ov-step-label {
+    color: var(--ov-bs-primary-final);
+    font-weight: 600;
+}
+
+/* ===== STEP TITLE ===== */
+.ov-step-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--ov-bs-text-final);
+    margin: 0 0 1.5rem;
+    text-align: center;
+}
+
+/* ===== SERVICIOS ===== */
+.ov-services-grid {
+    display: grid;
+    gap: 1rem;
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 0.25rem;
+}
+
+.ov-service-card {
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: var(--ov-bs-bg-white);
+    border: 2px solid var(--ov-bs-border);
+    border-radius: var(--ov-bs-radius);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ov-service-card:hover {
+    border-color: var(--ov-bs-primary-final);
+    box-shadow: var(--ov-bs-shadow-md);
+    transform: translateY(-2px);
+}
+
+.ov-service-card.ov-selected {
+    border-color: var(--ov-bs-primary-final);
+    background: rgba(99, 102, 241, 0.03);
+}
+
+.ov-service-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: var(--ov-bs-radius-sm);
+    background: linear-gradient(135deg, var(--ov-bs-primary) 0%, var(--ov-bs-primary-final) 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.ov-service-icon img {
+    border-radius: var(--ov-bs-radius-sm);
+}
+
+.ov-service-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.ov-service-name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--ov-bs-text-final);
+    line-height: 1.3;
+}
+
+.ov-service-description {
+    font-size: 0.875rem;
+    color: var(--ov-bs-text-final);
+    line-height: 1.4;
+    margin: 5px 0;
+}
+
+.ov-service-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: auto;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--ov-bs-border);
+    grid-column: 1 / -1;
+}
+
+.ov-service-duration {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.875rem;
+    color: var(--ov-bs-text-final);
+}
+
+.ov-service-price {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--ov-bs-primary-final);
+    margin-left: auto;
+}
+
+/* ===== PROFESIONALES (MISMO ESTILO QUE SERVICIOS) ===== */
+.ov-professionals-grid {
+    display: grid;
+    gap: 1rem;
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 0.25rem;
+}
+
+.ov-professional-card {
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: var(--ov-bs-bg-white);
+    border: 2px solid var(--ov-bs-border);
+    border-radius: var(--ov-bs-radius);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ov-professional-card:hover {
+    border-color: var(--ov-bs-primary-final);
+    box-shadow: var(--ov-bs-shadow-md);
+    transform: translateY(-2px);
+}
+
+.ov-professional-card.ov-selected {
+    border-color: var(--ov-bs-primary-final);
+    background: rgba(99, 102, 241, 0.03);
+}
+
+.ov-professional-avatar {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--ov-bs-border);
+}
+
+.ov-professional-avatar-placeholder {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--ov-bs-primary) 0%, var(--ov-bs-primary-final) 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+
+.ov-professional-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.ov-professional-name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--ov-bs-text-final);
+    line-height: 1.3;
+}
+
+.ov-professional-bio {
+    font-size: 0.875rem;
+    color: var(--ov-bs-text-final);
+    line-height: 1.4;
+    margin: 5px 0;
+}
+
+/* Opción "Cualquier profesional" destacada */
+.ov-professional-card.ov-any-professional {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(79, 70, 229, 0.05) 100%);
+    border-color: var(--ov-bs-primary-final);
+}
+
+.ov-professional-card.ov-any-professional .ov-professional-avatar-placeholder {
+    background: var(--ov-bs-primary-final);
+}
+
+/* Si hay un profesional específico seleccionado, neutralizar el estilo 'default' de Cualquier profesional */
+.ov-professionals-grid:has(.ov-professional-card.ov-selected:not(.ov-any-professional))
+  .ov-professional-card.ov-any-professional {
+    background: var(--ov-bs-bg-light);
+    border-color: var(--ov-bs-border);
+}
+
+/* Hover solo cuando ya hay un profesional específico seleccionado */
+.ov-professionals-grid:has(.ov-professional-card.ov-selected:not(.ov-any-professional))
+  .ov-professional-card.ov-any-professional:hover {
+    border-color: var(--ov-bs-primary-final);
+    background: rgba(99, 102, 241, 0.02);
+}
+
+/* ===== CALENDARIO MODERNO ===== */
+.ov-calendar-wrapper {
+    background: var(--ov-bs-bg-white);
+    border: 1px solid var(--ov-bs-border);
+    border-radius: var(--ov-bs-radius);
+    overflow: hidden;
+}
+
+.ov-calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--ov-bs-border);
+    background: var(--ov-bs-bg-light);
+}
+
+.ov-calendar-month {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ov-bs-text-final);
+}
+
+.ov-calendar-nav {
+    display: flex;
+    gap: 0.375rem;
+}
+
+.ov-calendar-nav button {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid var(--ov-bs-border);
+    background: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    padding: 0;
+}
+
+.ov-calendar-nav button:hover {
+    background: var(--ov-bs-bg-light);
+    border-color: var(--ov-bs-primary-final);
+}
+
+.ov-calendar-body {
+    padding: 1rem;
+}
+
+.ov-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.ov-calendar-day {
+    aspect-ratio: 1.4 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+}
+
+.ov-calendar-day.ov-weekday-label {
+    font-weight: 600;
+    color: var(--ov-bs-text-final);
+    cursor: default;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.ov-calendar-day.ov-disabled {
+    color: var(--ov-bs-text-light);
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.ov-calendar-day.ov-available {
+    color: var(--ov-bs-text-final);
+    background: var(--ov-bs-bg-light);
+}
+
+.ov-calendar-day.ov-available:hover {
+    background: var(--ov-bs-primary-final);
+    color: white;
+    transform: scale(1.05);
+}
+
+.ov-calendar-day.ov-selected {
+    background: var(--ov-bs-primary-final);
+    color: white;
+    font-weight: 600;
+}
+
+.ov-calendar-day.ov-today::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    width: 4px;
+    height: 4px;
+    background: var(--ov-bs-primary-final);
+    border-radius: 50%;
+}
+
+.ov-calendar-day.ov-selected.ov-today::after {
+    background: white;
+}
+
+/* ===== HORARIOS COMPACTOS ===== */
+.ov-time-slots-container {
+    margin-top: 1.9rem;
+}
+
+.ov-time-slots-container h3 {
+    font-size: 1.2rem;
+    color: var(--ov-bs-text-final);
+    margin-bottom: 1rem;
+}
+
+.ov-time-slots-container h4 {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ov-bs-text-final);
+    margin-bottom: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.ov-time-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    max-height: 240px;
+    overflow-y: auto;
+    padding: 0.25rem;
+}
+
+.ov-time-grid.ov-no-slots {
+    grid-template-columns: 1fr;
+}
+
+.ov-no-slots-message {
+    background: #f7f7f9;
+    border-radius: 8px;
+    border: 1px dashed #ddd;
+    padding: 8px 12px;
+}
+
+.ov-time-slot {
+    padding: 0.625rem;
+    background: var(--ov-bs-bg-light);
+    border: 1px solid var(--ov-bs-border);
+    border-radius: var(--ov-bs-radius-sm);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--ov-bs-text-final);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+}
+
+.ov-time-slot:hover {
+    border-color: var(--ov-bs-primary-final);
+    background: white;
+    box-shadow: var(--ov-bs-shadow-sm);
+}
+
+.ov-time-slot.ov-selected {
+    background: var(--ov-bs-primary-final);
+    border-color: var(--ov-bs-primary-final);
+    color: white;
+    font-weight: 600;
+}
+
+.ov-time-slot.ov-disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+
+.ov-time-slot-main {
+    display: block;
+}
+
+.ov-slot-remaining {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--ov-bs-primary-final);
+    line-height: 1.2;
+}
+
+.ov-time-slot.ov-selected .ov-slot-remaining {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* ===== FORMULARIO ===== */
+.ov-customer-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.ov-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.ov-form-group label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--ov-bs-text-final);
+}
+
+.ov-form-group input,
+.ov-form-group textarea,
+.ov-form-group select {
+    padding: 0.75rem 1rem !important;
+    border: 1px solid var(--ov-bs-border) !important;
+    border-radius: var(--ov-bs-radius-sm) !important;
+    font-size: 0.9375rem !important;
+    color: var(--ov-bs-text-dark) !important;
+    background: white !important;
+    transition: all 0.2s !important;
+    font-family: inherit !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.ov-form-group input:focus,
+.ov-form-group textarea:focus,
+.ov-form-group select:focus {
+    outline: none !important;
+    border-color: var(--ov-bs-primary) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+}
+
+.ov-form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* ===== CONFIRMACIÓN ===== */
+.ov-confirmation-details {
+    background: var(--ov-bs-bg-white);
+    border: 1px solid var(--ov-bs-border);
+    border-radius: var(--ov-bs-radius);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.ov-details-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--ov-bs-border);
+}
+
+.ov-details-header h3 {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--ov-bs-text-final);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0;
+}
+
+.ov-detail-item {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    align-items: center;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--ov-bs-border);
+}
+
+.ov-detail-item:last-child {
+    border-bottom: none;
+}
+
+.ov-detail-label {
+    font-size: 0.8125rem;
+    color: var(--ov-bs-text-final);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+}
+
+.ov-detail-value {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ov-bs-text-final);
+    text-align: right;
+}
+
+.ov-price-banner {
+    background: linear-gradient(135deg, var(--ov-bs-primary) 0%, var(--ov-bs-primary-final) 100%);
+    color: white;
+    padding: 1.25rem;
+    border-radius: var(--ov-bs-radius);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 1.5rem 0;
+}
+
+.ov-price-banner span:first-child {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.ov-price-banner span:last-child {
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+
+/* ===== TÉRMINOS ===== */
+.ov-terms-acceptance {
+    background: rgba(99, 102, 241, 0.05);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: var(--ov-bs-radius-sm);
+    padding: 1rem 1.25rem;
+    margin: 1.5rem 0;
+}
+
+.ov-checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--ov-bs-text-final);
+}
+
+.ov-checkbox-label input[type="checkbox"] {
+    margin-top: 0.125rem;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+/* ===== BOTONES ===== */
+.ov-navigation-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.ov-btn {
+    padding: 0.875rem 1.75rem;
+    border-radius: var(--ov-bs-radius-sm);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-family: inherit;
+}
+
+.ov-btn-primary {
+    background: var(--ov-bs-primary-final);
+    color: white;
+    flex: 1;
+}
+
+.ov-btn-primary:hover {
+    background: var(--ov-bs-primary-final);
+    box-shadow: var(--ov-bs-shadow-md);
+}
+
+.ov-btn-secondary {
+    background: white;
+    color: var(--ov-bs-text-final);
+    border: 1px solid var(--ov-bs-border);
+}
+
+.ov-btn-secondary:hover {
+    background: var(--ov-bs-bg-light);
+}
+
+.ov-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ===== LOADER ===== */
+.ov-loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    gap: 1rem;
+}
+
+.ov-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--ov-bs-border);
+    border-top-color: var(--ov-bs-primary-final);
+    border-radius: 50%;
+    animation: ov-spin 0.8s linear infinite;
+}
+
+@keyframes ov-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .ov-booking-container {
+        padding: 0;
+    }
+
+    .ov-progress-bar {
+        padding: 1.5rem 1rem 2rem;
+        max-width: 100%;
+    }
+
+    .ov-progress-bar::before {
+        top: 2.7rem;
+        left: 10vw;
+        right: 10vw;
+    }
+
+    .ov-step-number {
+        width: 36px;
+        height: 36px;
+        font-size: 0.8125rem;
+    }
+
+    .ov-step-label {
+        font-size: 0.6875rem;
+        max-width: 70px;
+    }
+
+    .ov-step-title {
+        font-size: 1.25rem;
+        margin-bottom: 1.25rem;
+        padding: 0 1rem;
+    }
+
+    .ov-services-grid {
+        padding: 1rem;
+        gap: 0.875rem;
+    }
+
+    .ov-service-card {
+        grid-template-columns: 40px 1fr;
+        padding: 1rem;
+        gap: 0.875rem;
+    }
+
+    .ov-service-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1.25rem;
+    }
+
+    .ov-service-name {
+        font-size: 1rem;
+    }
+
+    .ov-service-price {
+        font-size: 1.125rem;
+    }
+
+    /* Profesionales responsive */
+    .ov-professionals-grid {
+        padding: 1rem;
+        gap: 0.875rem;
+    }
+
+    .ov-professional-card {
+        grid-template-columns: 50px 1fr;
+        padding: 1rem;
+        gap: 0.875rem;
+    }
+
+    .ov-professional-avatar,
+    .ov-professional-avatar-placeholder {
+        width: 50px;
+        height: 50px;
+        font-size: 1.25rem;
+    }
+
+    .ov-professional-name {
+        font-size: 1rem;
+    }
+
+    .ov-calendar-wrapper {
+        margin: 0 1rem;
+    }
+
+    .ov-calendar-header {
+        padding: 1rem;
+    }
+
+    .ov-calendar-month {
+        font-size: 1rem;
+    }
+
+    .ov-calendar-body {
+        padding: 0.75rem;
+    }
+
+    .ov-calendar-grid {
+        gap: 3px;
+    }
+
+    .ov-calendar-day {
+        font-size: 0.8125rem;
+    }
+
+    .ov-time-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.625rem;
+        max-height: 240px;
+    }
+
+    .ov-time-slot {
+        padding: 0.625rem;
+        font-size: 0.8125rem;
+    }
+
+    .ov-customer-form {
+        padding: 1rem;
+    }
+
+    .ov-form-group input,
+    .ov-form-group textarea {
+        padding: 0.6875rem 0.875rem;
+        font-size: 0.875rem;
+    }
+
+    .ov-confirmation-details {
+        margin: 0 1rem;
+        padding: 1.25rem;
+    }
+
+    .ov-detail-item {
+        grid-template-columns: 90px 1fr;
+        padding: 0.75rem 0;
+    }
+
+    .ov-detail-label {
+        font-size: 0.8125rem;
+    }
+
+    .ov-detail-value {
+        font-size: 0.875rem;
+    }
+
+    .ov-price-banner {
+        margin: 1rem;
+        padding: 1rem 1.25rem;
+    }
+
+    .ov-price-banner span:last-child {
+        font-size: 1.5rem;
+    }
+
+    .ov-terms-acceptance {
+        margin: 1rem 0;
+        padding: 0.875rem 1rem;
+    }
+
+    .ov-navigation-buttons {
+        flex-direction: column-reverse;
+        padding: 0 1rem 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .ov-btn {
+        padding: 0.8125rem 1.5rem;
+        font-size: 0.875rem;
+        width: auto;
+        flex: 0 0 auto;
+    }
+
+    .ov-time-slots-container h3 {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .ov-step-number {
+        width: 32px;
+        height: 32px;
+        font-size: 0.75rem;
+    }
+
+    .ov-progress-bar::before {
+        top: 2.5rem;
+    }
+
+    .ov-step-label {
+        font-size: 0.625rem;
+        max-width: 60px;
+        line-height: 1.2;
+    }
+
+    .ov-step-title {
+        font-size: 1.125rem;
+    }
+
+    .ov-calendar-grid {
+        gap: 2px;
+    }
+
+    .ov-calendar-day {
+        font-size: 0.75rem;
+    }
+
+    .ov-time-grid {
+        grid-template-columns: repeat(2, 1fr);
+        max-height: 220px;
+    }
+
+    .ov-detail-item {
+        grid-template-columns: 1fr;
+        gap: 0.25rem;
+        text-align: left;
+    }
+
+    .ov-detail-value {
+        text-align: left;
+    }
+
+    .ov-service-name {
+        font-size: 0.97rem;
+    }
+
+    .ov-service-description {
+        font-size: 0.8rem;
+    }
+
+    .ov-service-price {
+        font-size: 1rem;
+    }
+}
+
+/* ===== SCROLLBAR ===== */
+.ov-services-grid::-webkit-scrollbar,
+.ov-time-grid::-webkit-scrollbar {
+    width: 6px;
+}
+
+.ov-services-grid::-webkit-scrollbar-track,
+.ov-time-grid::-webkit-scrollbar-track {
+    background: var(--ov-bs-bg-light);
+    border-radius: 3px;
+}
+
+.ov-services-grid::-webkit-scrollbar-thumb,
+.ov-time-grid::-webkit-scrollbar-thumb {
+    background: var(--ov-bs-border);
+    border-radius: 3px;
+}
+
+.ov-services-grid::-webkit-scrollbar-thumb:hover,
+.ov-time-grid::-webkit-scrollbar-thumb:hover {
+    background: var(--ov-bs-text-light);
+}
+
+/* ===== CRÍTICO: OCULTAR PASOS INACTIVOS ===== */
+.ov-step {
+    display: none;
+}
+
+.ov-step.ov-active {
+    display: block;
+    animation: ovFadeIn 0.25s ease-out;
+}
+
+@keyframes ovFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== CONTENIDO STEP ===== */
+.ov-step-content {
+    min-height: 400px;
+}
+
+@media (max-width: 768px) {
+    .ov-step-content {
+        min-height: 350px;
+    }
+}
+
+@media (max-width: 480px) {
+    .ov-step-content {
+        min-height: 320px;
+    }
+}
+
+/* ===== MODALES ===== */
+.ov-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    opacity: 0;
+    transition: opacity 0.2s ease-out;
+}
+
+.ov-modal-overlay.ov-show {
+    display: flex !important;
+    opacity: 1;
+}
+
+@keyframes ovModalFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.ov-modal {
+    background: white;
+    border-radius: var(--ov-bs-radius);
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    max-width: 500px;
+    width: 100%;
+    transform: scale(0.95);
+    opacity: 0;
+    transition: all 0.2s ease-out;
+}
+
+.ov-modal-overlay.ov-show .ov-modal {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.ov-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--ov-bs-border);
+}
+
+.ov-modal-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--ov-bs-text-final);
+    margin: 0;
+}
+
+.ov-modal-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: none;
+    background: var(--ov-bs-bg-light);
+    color: var(--ov-bs-text-final);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.ov-modal-close:hover {
+    background: var(--ov-bs-border);
+    color: var(--ov-bs-text-final);
+}
+
+.ov-modal-body {
+    padding: 1.2rem 1.5rem;
+    font-size: 0.9375rem;
+    color: var(--ov-bs-text-final);
+    line-height: 1.6;
+}
+
+/* ===== ESTILOS PARA CONTENIDO HTML EN MODAL ===== */
+.ov-modal-body p {
+    font-size: 0.875rem;
+    line-height: 1.6;
+    margin-bottom: 0.75rem;
+    color: var(--ov-bs-text-final);
+}
+
+.ov-modal-body h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ov-bs-text-final);
+    margin-top: 1.25rem;
+    margin-bottom: 0.75rem;
+}
+
+.ov-modal-body h3 {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ov-bs-text-final);
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.ov-modal-body ul,
+.ov-modal-body ol {
+    font-size: 0.875rem;
+    line-height: 1.6;
+    margin: 0.75rem 0 0.75rem 1.25rem;
+    color: var(--ov-bs-text-final);
+}
+
+.ov-modal-body li {
+    margin-bottom: 0.5rem;
+}
+
+.ov-modal-body strong {
+    font-weight: 600;
+    color: var(--ov-bs-text-final);
+}
+
+.ov-modal-body .highlight {
+    background: rgba(99, 102, 241, 0.05);
+    border-left: 3px solid var(--ov-bs-primary);
+    padding: 0.75rem 1rem;
+    margin: 1rem 0;
+    border-radius: 4px;
+    font-size: 0.875rem;
+}
+
+.ov-modal-body footer {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--ov-bs-border);
+    font-size: 0.75rem;
+    color: var(--ov-bs-text-final);
+    text-align: center;
+}
+
+.ov-modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--ov-bs-border);
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+
+.ov-modal-footer .ov-btn {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+}
+
+/* Modal de error/advertencia */
+.ov-modal.ov-modal-error .ov-modal-header {
+    background: rgba(220, 38, 38, 0.05);
+    border-bottom-color: rgba(220, 38, 38, 0.2);
+}
+
+.ov-modal.ov-modal-error .ov-modal-title {
+    color: #dc2626;
+}
+
+.ov-modal.ov-modal-warning .ov-modal-header {
+    background: rgba(245, 158, 11, 0.05);
+    border-bottom-color: rgba(245, 158, 11, 0.2);
+}
+
+.ov-modal.ov-modal-warning .ov-modal-title {
+    color: #f59e0b;
+}
+
+@media (max-width: 480px) {
+    .ov-modal {
+        max-width: calc(100% - 2rem);
+    }
+
+    .ov-modal-header {
+        padding: 1rem 1.25rem;
+    }
+
+    .ov-modal-title {
+        font-size: 1rem;
+    }
+
+    .ov-modal-body {
+        padding: 1.25rem;
+        font-size: 0.875rem;
+    }
+
+    .ov-modal-body h2 {
+        font-size: 0.9375rem;
+    }
+
+    .ov-modal-body p,
+    .ov-modal-body ul,
+    .ov-modal-body ol {
+        font-size: 0.8125rem;
+    }
+
+    .ov-modal-footer {
+        padding: 0.875rem 1.25rem;
+        flex-direction: column-reverse;
+    }
+
+    .ov-modal-footer .ov-btn {
+        width: 100%;
+    }
+}
+
+/* ===== AJUSTES RESPONSIVE ADICIONALES ===== */
+@media (max-width: 768px) {
+    .ov-calendar-day {
+        aspect-ratio: 1 !important;
+    }
+
+    .ov-step-title {
+        font-size: 1rem;
+    }
+
+    .ov-time-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 0.625rem;
+        max-height: 220px;
+    }
+
+    .ov-time-slot {
+        font-size: 0.75rem;
+        padding: 0.625rem 0.5rem;
+    }
+
+    .ov-time-slots-container h4 {
+        font-size: 0.75rem;
+    }
+
+    .ov-calendar-month {
+        font-size: 0.875rem !important;
+    }
+
+    .ov-calendar-nav button {
+        width: 28px !important;
+        height: 28px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .ov-time-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        max-height: 200px;
+    }
+}
+
+/* ===== MODAL DE ÉXITO ===== */
+.ov-success-content {
+    text-align: center;
+    padding: 1rem;
+}
+
+.ov-success-icon {
+    font-size: 4rem;
+    color: var(--ov-bs-success-final);
+    margin-bottom: 1rem;
+    animation: ovSuccessPulse 0.5s ease-out;
+}
+
+@keyframes ovSuccessPulse {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.ov-success-content h2 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--ov-bs-text-final);
+    margin: 1rem 0;
+}
+
+.ov-success-details {
+    background: var(--ov-bs-bg-light);
+    border-radius: var(--ov-bs-radius-sm);
+    padding: 1rem;
+    margin-top: 1.5rem;
+    text-align: left;
+}
+
+.ov-success-details p {
+    margin: 0.5rem 0;
+    font-size: 0.9375rem;
+    color: var(--ov-bs-text-final);
+}
+
+.ov-success-details strong {
+    color: var(--ov-bs-primary-final);
+    font-weight: 600;
+}
+
+.ov-btn-success {
+    background: var(--ov-bs-success-final) !important;
+}
+
+.ov-btn-success:hover {
+    opacity: 0.9;
+}
+
+/* ===== CONFIRMACIÓN - ESTILOS COMPLETOS ===== */
+.ov-confirmation-section {
+    margin-bottom: 1.5rem;
+}
+
+.ov-confirmation-section h3 {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--ov-bs-text-final);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    line-height: 1.3;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--ov-bs-border);
+}
+
+.ov-confirmation-section h3 i {
+    color: var(--ov-bs-primary-final);
+}
+
+.ov-detail-row {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    align-items: center;
+    padding: 0.875rem 0;
+    border-bottom: 1px solid var(--ov-bs-border);
+}
+
+.ov-detail-row:last-child {
+    border-bottom: none;
+}
+
+.ov-detail-row .ov-detail-label {
+    font-size: 0.8125rem;
+    color: var(--ov-bs-text-final);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.ov-detail-row .ov-detail-label i {
+    color: var(--ov-bs-primary-final);
+    width: 16px;
+}
+
+.ov-detail-row .ov-detail-value {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ov-bs-text-final);
+    text-align: right;
+}
+
+.ov-price-highlight {
+    background: linear-gradient(135deg, 
+        var(--ov-bs-primary-final) 0%, 
+        color-mix(in srgb, var(--ov-bs-primary-final) 85%, black) 100%
+    );
+    color: white;
+    padding: 0.5rem 1.5rem;
+    border-radius: var(--ov-bs-radius);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 1.5rem 0 2rem;
+}
+
+.ov-price-highlight .ov-detail-label {
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: white;
+}
+
+.ov-price-highlight .ov-detail-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .ov-detail-row {
+        grid-template-columns: 90px 1fr;
+        padding: 0.75rem 0;
+    }
+
+    .ov-detail-row .ov-detail-label {
+        font-size: 0.75rem;
+    }
+
+    .ov-detail-row .ov-detail-value {
+        font-size: 0.875rem;
+    }
+
+    .ov-price-highlight .ov-detail-label {
+        font-size: 0.875rem;
+    }
+
+    .ov-price-highlight .ov-detail-value {
+        font-size: 1.2rem;
+    }
+
+    .ov-success-content h2 {
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .ov-detail-row {
+        grid-template-columns: 1fr;
+        gap: 0.25rem;
+    }
+
+    .ov-detail-row .ov-detail-value {
+        text-align: left;
+        font-weight: 700;
+    }
+
+    .ov-price-highlight .ov-detail-value {
+        font-size: 1.1rem;
+    }
+
+    .ov-success-content h2 {
+        font-size: 1.1rem;
+    }
+
+    .ov-success-details p {
+        font-size: 0.85rem;
+    }
+}
+
+/* ===== MES CALENDARIO ===== */
+#ov-current-month {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--ov-bs-text-final);
+}
+
+@media (max-width: 768px) {
+    #ov-current-month {
+        font-size: 1rem;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    #ov-current-month {
+        font-size: 0.95rem;
+    }
+}
+
+/* ===== ESTILOS ALERTS (MODALES) ===== */
+.ov-alert-content {
+    text-align: center;
+    padding: 1rem;
+}
+
+.ov-alert-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.ov-alert-message {
+    font-size: 1.1rem;
+    color: var(--ov-bs-text-final);
+    margin: 0;
+}
+
+/* Colores por tipo de alerta */
+.ov-alert-success .ov-alert-icon {
+    color: var(--ov-bs-success-final);
+}
+
+.ov-alert-error .ov-alert-icon {
+    color: var(--ov-bs-error-final);
+}
+
+.ov-alert-warning .ov-alert-icon {
+    color: var(--ov-bs-warning-final);
+}
+
+.ov-alert-info .ov-alert-icon {
+    color: var(--ov-bs-primary-final);
+}
+
+/* Botones de alerta */
+.ov-btn-alert {
+    min-width: 120px;
+}
+
+.ov-btn-alert-success {
+    color: white !important;
+    background: var(--ov-bs-success-final) !important;
+    border-color: var(--ov-bs-success-final) !important;
+}
+
+.ov-btn-alert-error {
+    color: white !important;
+    background: var(--ov-bs-error-final) !important;
+    border-color: var(--ov-bs-error-final) !important;
+}
+
+.ov-btn-alert-warning {
+    color: white !important;
+    background: var(--ov-bs-warning-final) !important;
+    border-color: var(--ov-bs-warning-final) !important;
+}
+
+.ov-btn-alert-info {
+    color: white !important;
+    background: var(--ov-bs-primary-final) !important;
+    border-color: var(--ov-bs-primary-final) !important;
+}
+
+/* Scrollbar personalizado - Solo en contenedor de booking */
+.ov-booking-container *::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.ov-booking-container *::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.ov-booking-container *::-webkit-scrollbar-thumb {
+  background: var(--ov-bs-secondary-final, #a29bfe);
+  border-radius: 10px;
+}
+
+/* Hover: usa color-mix si el navegador lo soporta */
+.ov-booking-container *::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--ov-bs-secondary-final, #a29bfe) 80%, #000);
+}
+
+/* Firefox */
+.ov-booking-container * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ov-bs-secondary-final, #a29bfe) #f1f1f1;
+}
+
+
+.ov-calendar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+.ov-calendar-actions .ov-btn {
+    text-decoration: none;
+}
+
+.ov-booking-honeypot {
+    position: absolute !important;
+    left: -10000px !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+}

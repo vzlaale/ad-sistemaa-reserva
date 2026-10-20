@@ -1,0 +1,1177 @@
+/**
+ * OV Booking System - Admin Styles
+ * Inspirado en diseños modernos de plugins premium
+ * IMPORTANTE: Todos los estilos están limitados a .ov-booking-admin
+ */
+
+/* ===== BOTONES GLOBALES (fuera del scope) ===== */
+.ov-professionals-manager .page-title-action,
+.ov-services-manager .page-title-action,
+.ov-schedules-manager .page-title-action,
+.ov-holidays-manager .page-title-action,
+.ov-fields-manager .page-title-action {
+    text-decoration: none !important;
+    transition: all 0.3s !important;
+    display: inline-block;
+    margin-left: 4px;
+}
+
+/* Botón VOLVER - Gris secundario */
+.ov-professionals-manager .ov-btn-back,
+.ov-services-manager .ov-btn-back,
+.ov-schedules-manager .ov-btn-back,
+.ov-holidays-manager .ov-btn-back,
+.ov-fields-manager .ov-btn-back {
+    background: #f6f7f7 !important;
+    border-color: #dcdcde !important;
+    color: #2c3338 !important;
+}
+
+.ov-professionals-manager .ov-btn-back:hover,
+.ov-services-manager .ov-btn-back:hover,
+.ov-schedules-manager .ov-btn-back:hover,
+.ov-holidays-manager .ov-btn-back:hover,
+.ov-fields-manager .ov-btn-back:hover {
+    background: #f0f0f1 !important;
+    border-color: #c3c4c7 !important;
+}
+
+/* Botón AGREGAR - Morado primario */
+.ov-professionals-manager .ov-btn-add,
+.ov-services-manager .ov-btn-add,
+.ov-schedules-manager .ov-btn-add,
+.ov-holidays-manager .ov-btn-add,
+.ov-fields-manager .ov-btn-add {
+    background: #6c5ce7 !important;
+    border-color: #6c5ce7 !important;
+    color: white !important;
+}
+
+.ov-professionals-manager .ov-btn-add:hover,
+.ov-services-manager .ov-btn-add:hover,
+.ov-schedules-manager .ov-btn-add:hover,
+.ov-holidays-manager .ov-btn-add:hover,
+.ov-fields-manager .ov-btn-add:hover {
+    background: #5649c0 !important;
+    border-color: #5649c0 !important;
+}
+
+/* ===== VARIABLES (solo dentro del plugin) ===== */
+.ov-booking-admin {
+    --ov-admin-primary: #6c5ce7;
+    --ov-admin-success: #00b894;
+    --ov-admin-danger: #d63031;
+    --ov-admin-warning: #fdcb6e;
+    --ov-admin-gray-50: #f8f9fa;
+    --ov-admin-gray-100: #e9ecef;
+    --ov-admin-gray-200: #dee2e6;
+    --ov-admin-gray-300: #ced4da;
+    --ov-admin-gray-600: #6c757d;
+    --ov-admin-gray-800: #343a40;
+    --ov-admin-gray-900: #212529;
+}
+
+.ov-booking-admin {
+    margin-top: 20px;
+}
+
+/* ===== TABLAS RESPONSIVE - BASE ===== */
+.ov-booking-admin table {
+    width: 100%;
+    max-width: 100%;
+}
+
+.ov-booking-admin .ov-fields-table,
+.ov-booking-admin .wp-list-table {
+    border-collapse: collapse;
+}
+
+/* Contenedor con scroll en móvil */
+@media (max-width: 1080px) {
+    .ov-booking-admin .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* ===== ESTADO VACÍO ===== */
+.ov-empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: var(--ov-admin-gray-50);
+    border-radius: 12px;
+    margin: 2rem 0;
+    border: 2px dashed var(--ov-admin-gray-300);
+}
+
+.ov-empty-state-icon {
+    font-size: 4rem;
+    color: var(--ov-admin-gray-300);
+    margin-bottom: 1rem;
+}
+
+.ov-empty-state h2 {
+    color: var(--ov-admin-gray-600);
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+}
+
+.ov-empty-state-small {
+    padding: 2rem;
+    background: var(--ov-admin-gray-50);
+    border-radius: 8px;
+    text-align: center;
+    color: var(--ov-admin-gray-600);
+}
+
+/* ===== TABS ===== */
+.ov-tabs {
+    border-bottom: 1px solid var(--ov-admin-gray-200);
+    margin-bottom: 2rem;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.ov-tab-link {
+    display: inline-block;
+    padding: 1rem 1.5rem;
+    text-decoration: none;
+    color: var(--ov-admin-gray-600);
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s;
+    font-weight: 500;
+    border-radius: 8px 8px 0 0;
+}
+
+.ov-tab-link:hover {
+    color: var(--ov-admin-primary);
+    background: var(--ov-admin-gray-50);
+}
+
+.ov-tab-link.active {
+    color: var(--ov-admin-primary);
+    border-bottom-color: var(--ov-admin-primary);
+    background: var(--ov-admin-gray-50);
+}
+
+.ov-tab-content {
+    display: none;
+}
+
+.ov-tab-content.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== STATUS BADGES ===== */
+.ov-status {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.ov-status-active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.ov-status-inactive {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.ov-status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.ov-status-confirmed {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.ov-status-completed {
+    background: #d4edda;
+    color: #155724;
+}
+
+.ov-status-cancelled {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* ===== SHORTCODE BOX ===== */
+.ov-shortcode-box {
+    background: linear-gradient(135deg, var(--ov-admin-primary) 0%, #a29bfe 100%);
+    padding: 2rem;
+    border-radius: 12px;
+    margin-top: 2rem;
+    color: white;
+}
+
+.ov-shortcode-box h3 {
+    margin-top: 0;
+    color: white;
+    font-size: 1.2rem;
+}
+
+.ov-shortcode-box .description {
+  color: #f5f5f5 !important;
+  margin-top: 10px;
+}
+
+.ov-shortcode-box input {
+    background: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+}
+
+/* ===== SETTINGS CARDS ===== */
+.ov-settings-card {
+    background: #fff;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--ov-admin-gray-200);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.ov-settings-card h2 {
+    margin-top: 0;
+    color: var(--ov-admin-gray-800);
+    font-size: 1.3rem;
+    border-bottom: 2px solid var(--ov-admin-gray-100);
+    padding-bottom: 1rem;
+}
+
+/* ===== GESTIÓN DE SERVICIOS ===== */
+.ov-services-manager {
+    margin-top: 2rem;
+}
+
+.ov-services-grid-container {
+    display: grid;
+    grid-template-columns: 1fr 500px;
+    gap: 2rem;
+}
+
+@media (max-width: 1200px) {
+    .ov-services-grid-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Lista de Servicios */
+.ov-services-list {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid var(--ov-admin-gray-200);
+}
+
+.ov-services-list h2 {
+    margin-top: 0;
+    color: var(--ov-admin-gray-800);
+    font-size: 1.3rem;
+    margin-bottom: 1.5rem;
+}
+
+.ov-services-items {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.ov-service-item {
+    display: grid;
+    grid-template-columns: 60px 1fr auto;
+    gap: 1rem;
+    align-items: center;
+    padding: 1.5rem;
+    background: var(--ov-admin-gray-50);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    transition: all 0.3s;
+}
+
+.ov-service-item:hover {
+    border-color: var(--ov-admin-primary);
+    box-shadow: 0 4px 12px rgba(108, 92, 231, 0.15);
+}
+
+.ov-service-item.inactive {
+    opacity: 0.6;
+}
+
+.ov-service-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    background: var(--ov-admin-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: bold;
+    overflow: hidden;
+}
+
+.ov-service-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.ov-service-info h3 {
+    margin: 0 0 0.5rem 0;
+    color: var(--ov-admin-gray-800);
+    font-size: 1.1rem;
+}
+
+.ov-service-meta {
+    display: flex;
+    gap: 1rem;
+    color: var(--ov-admin-gray-600);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.ov-service-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.ov-service-meta .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+.ov-service-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.ov-service-actions .button {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.ov-service-actions .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+/* Formulario de Servicio */
+.ov-service-form-container {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid var(--ov-admin-gray-200);
+    position: sticky;
+    top: 32px;
+    max-height: calc(100vh - 64px);
+    overflow-y: auto;
+}
+
+.ov-service-form-container h2 {
+    margin-top: 0;
+    color: var(--ov-admin-gray-800);
+    font-size: 1.3rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--ov-admin-gray-100);
+}
+
+.ov-service-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.ov-form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.ov-form-row label {
+    font-weight: 600;
+    color: var(--ov-admin-gray-800);
+    font-size: 0.95rem;
+}
+
+.ov-form-row input[type="text"],
+.ov-form-row input[type="number"],
+.ov-form-row input[type="url"],
+.ov-form-row textarea,
+.ov-form-row select {
+    padding: 10px 14px;
+    border: 1px solid var(--ov-admin-gray-300);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: all 0.3s;
+}
+
+.ov-form-row input:focus,
+.ov-form-row textarea:focus,
+.ov-form-row select:focus {
+    outline: none;
+    border-color: var(--ov-admin-primary);
+    box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
+}
+
+.ov-form-row textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.ov-form-row .description {
+    font-size: 0.85rem;
+    color: var(--ov-admin-gray-600);
+    margin-top: 0.25rem;
+}
+
+.ov-form-row-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.ov-form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--ov-admin-gray-100);
+}
+
+.ov-form-actions .button-primary {
+    background: var(--ov-admin-primary);
+    border-color: var(--ov-admin-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.ov-form-actions .button-primary:hover {
+    background: #5a4dd0;
+    border-color: #5a4dd0;
+}
+
+.ov-form-actions .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+/* ===== FORMULARIO EDITOR ===== */
+.ov-form-editor {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid var(--ov-admin-gray-200);
+    margin-bottom: 2rem;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .ov-services-grid-container {
+        grid-template-columns: 1fr;
+    }
+
+    .ov-service-item {
+        grid-template-columns: 50px 1fr;
+        gap: 1rem;
+    }
+
+    .ov-service-actions {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+    }
+
+    .ov-form-row-group {
+        grid-template-columns: 1fr;
+    }
+
+    .ov-service-form-container {
+        position: static;
+        max-height: none;
+    }
+}
+
+/* ===== INTEGRACIONES ===== */
+.ov-integration-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid var(--ov-admin-gray-200);
+    margin-bottom: 1.5rem;
+}
+
+.ov-integration-section h3 {
+    margin-top: 0;
+    color: var(--ov-admin-gray-800);
+    font-size: 1.2rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.ov-integration-section h3::before {
+    content: '🔗';
+    font-size: 1.5rem;
+}
+
+.ov-integration-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.ov-integration-status strong {
+    color: var(--ov-admin-gray-700);
+}
+
+/* ===== ANIMACIONES ===== */
+.ov-service-item,
+.ov-service-form-container,
+.ov-services-list {
+    animation: slideInUp 0.4s ease;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== ENLACES DE ACCIÓN ===== */
+.ov-booking-admin .page-title-action {
+    background: var(--ov-admin-primary) !important;
+    border-color: var(--ov-admin-primary) !important;
+    color: white !important;
+    transition: all 0.3s !important;
+}
+
+.ov-booking-admin .page-title-action:hover {
+    background: #5a4dd0 !important;
+    border-color: #5a4dd0 !important;
+}
+
+/* ===== TABLAS MEJORADAS (SOLO DENTRO DEL PLUGIN) ===== */
+.ov-booking-admin .wp-list-table {
+    border: 1px solid var(--ov-admin-gray-200);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.ov-booking-admin .wp-list-table thead {
+    background: var(--ov-admin-gray-50);
+}
+
+.ov-booking-admin .wp-list-table tbody tr:hover {
+    background: var(--ov-admin-gray-50);
+}
+
+/* ===== RESPONSIVE ADMIN ===== */
+@media (max-width: 782px) {
+    /* ✅ Wrapper con scroll horizontal para tablas */
+    .ov-table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -10px;
+        padding: 0 10px;
+    }
+
+    .ov-booking-admin .wp-list-table {
+        min-width: 800px; /* Ancho mínimo para que no se comprima */
+    }
+
+    /* Form editor tabs más compactos */
+    .ov-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap;
+    }
+
+    .ov-tab-link {
+        white-space: nowrap;
+        padding: 0.75rem 1rem;
+        font-size: 0.85rem;
+    }
+
+    /* Campos del gestor más compactos */
+    .ov-fields-manager table {
+        font-size: 0.85rem;
+    }
+
+    .ov-fields-manager input[type="text"],
+    .ov-fields-manager select {
+        font-size: 0.85rem;
+        padding: 0.5rem;
+    }
+
+    /* Color pickers en columna */
+    .ov-color-picker-group {
+        display: block;
+    }
+
+    .ov-color-picker-group input {
+        width: 100%;
+        max-width: none;
+    }
+}
+
+@media (max-width: 600px) {
+    /* Formularios a columna única */
+    .ov-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Botones a ancho completo */
+    .ov-button-group {
+        flex-direction: column;
+    }
+
+    .ov-button-group .button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Stats cards apiladas */
+    .ov-stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ===== RESPONSIVE TABLAS DESDE 1080px ===== */
+@media (max-width: 1080px) {
+    /* Wrapper con scroll horizontal */
+    .ov-table-wrapper,
+    .wrap > .wp-list-table {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        display: block;
+    }
+    
+    .wp-list-table {
+        min-width: 1000px;
+        width: 100%;
+        display: table;
+    }
+    
+    /* Reducir padding y fuentes */
+    .wp-list-table th,
+    .wp-list-table td {
+        padding: 10px 8px !important;
+        font-size: 13px !important;
+    }
+    
+    .wp-list-table th {
+        white-space: nowrap;
+        font-size: 12px !important;
+    }
+    
+    /* Botón estado */
+    .ov-status-select {
+        padding: 6px 10px !important;
+        font-size: 12px !important;
+        min-width: 110px !important;
+    }
+    
+    /* Campos formulario */
+    .ov-fields-table {
+        min-width: 900px;
+    }
+    
+    /* Ajustar controles */
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    select,
+    textarea {
+        font-size: 13px !important;
+    }
+}
+
+/* ===== RESPONSIVE MÓVIL (768px) ===== */
+@media (max-width: 768px) {
+    /* Contenedores generales */
+    .wrap {
+        margin-right: 10px !important;
+        margin-left: 10px !important;
+    }
+    
+    /* Títulos */
+    h1, h2 {
+        font-size: 20px !important;
+    }
+    
+    h3 {
+        font-size: 16px !important;
+    }
+    
+    /* Tabla campos formulario */
+    .ov-fields-table {
+        min-width: 800px;
+        display: table;
+    }
+    
+    .ov-fields-table thead th {
+        font-size: 11px !important;
+        padding: 8px 6px !important;
+        white-space: nowrap;
+    }
+    
+    .ov-fields-table td input,
+    .ov-fields-table td select {
+        font-size: 12px !important;
+        padding: 6px !important;
+        min-width: 100px;
+    }
+    
+    .ov-fields-table td {
+        padding: 8px 6px !important;
+        font-size: 12px !important;
+    }
+    
+    /* Tablas generales */
+    .wp-list-table {
+        min-width: 800px;
+    }
+    
+    .wp-list-table th,
+    .wp-list-table td {
+        padding: 8px 6px !important;
+        font-size: 12px !important;
+    }
+    
+    .wp-list-table th {
+        font-size: 11px !important;
+    }
+    
+    /* Avatares */
+    .wp-list-table img {
+        max-width: 35px !important;
+        max-height: 35px !important;
+    }
+    
+    /* Botones */
+    .button,
+    .button-primary,
+    .button-secondary {
+        font-size: 12px !important;
+        padding: 6px 12px !important;
+    }
+    
+    .button-small {
+        padding: 4px 8px !important;
+        font-size: 11px !important;
+    }
+    
+    .button-large {
+        font-size: 13px !important;
+        padding: 8px 16px !important;
+    }
+    
+    /* Estado select */
+    .ov-status-select {
+        padding: 4px 6px !important;
+        font-size: 11px !important;
+        min-width: 85px !important;
+    }
+    
+    /* Inputs generales */
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="url"],
+    select,
+    textarea {
+        font-size: 14px !important;
+        padding: 8px !important;
+    }
+    
+    /* Tabs */
+    .nav-tab {
+        font-size: 12px !important;
+        padding: 6px 12px !important;
+    }
+}
+
+
+/* ===== RESERVATIONS TABLE HORIZONTAL SCROLL ===== */
+.ov-booking-admin .ov-table-wrapper {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid #dcdcde;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.ov-booking-admin .ov-table-wrapper .wp-list-table {
+    min-width: 1500px;
+    table-layout: auto !important;
+    border: 0;
+}
+
+.ov-booking-admin .ov-table-wrapper .wp-list-table th,
+.ov-booking-admin .ov-table-wrapper .wp-list-table td {
+    white-space: normal;
+    vertical-align: top;
+}
+
+.ov-booking-admin .ov-table-wrapper .wp-list-table th {
+    white-space: nowrap;
+}
+
+.ov-booking-admin .ov-table-wrapper .wp-list-table .button {
+    margin-bottom: 4px;
+}
+
+/* ===== OV BOOKING CALENDAR BASE ===== */
+.ov-dashboard .ov-calendar-header {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.ov-dashboard .ov-calendar-title {
+    font-size: 1.25em;
+    font-weight: 600;
+    margin: 0;
+    text-transform: capitalize;
+}
+
+.ov-dashboard .ov-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(100px, 1fr));
+    overflow-x: auto;
+}
+
+.ov-dashboard .ov-calendar-weekday,
+.ov-dashboard .ov-calendar-day {
+    border-right: 1px solid #e2e4e7;
+    border-top: 1px solid #e2e4e7;
+    min-width: 100px;
+}
+
+.ov-dashboard .ov-calendar-weekday {
+    background: #f6f7f7;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px;
+    text-align: center;
+}
+
+.ov-dashboard .ov-calendar-day {
+    min-height: 120px;
+    padding: 7px;
+}
+
+.ov-dashboard .ov-calendar-day:nth-child(7n) {
+    border-right: 0;
+}
+
+.ov-dashboard .ov-calendar-day.is-outside {
+    background: #f9f9f9;
+    color: #8c8f94;
+}
+
+.ov-dashboard .ov-calendar-day.is-today .ov-calendar-date {
+    background: #2271b1;
+    border-radius: 50%;
+    color: #fff;
+    display: inline-flex;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+}
+
+.ov-dashboard .ov-calendar-date {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.ov-dashboard .ov-calendar-event {
+    border: 0;
+    border-radius: 3px;
+    color: #fff;
+    cursor: pointer;
+    display: block;
+    font-size: 11px;
+    line-height: 1.35;
+    margin: 3px 0;
+    overflow: hidden;
+    padding: 4px 5px;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+}
+
+.ov-dashboard .ov-calendar-event:hover {
+    opacity: .88;
+}
+
+/* ===== OV BOOKING DASHBOARD ===== */
+.ov-dashboard {
+    max-width: 100%;
+}
+
+.ov-dashboard-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    background: #fff;
+    border: 1px solid #e2e4e7;
+    border-radius: 8px;
+    padding: 26px;
+    margin: 20px 0;
+}
+
+.ov-dashboard-header h1 {
+    margin: 0 0 8px;
+    font-size: 28px;
+    font-weight: 500;
+}
+
+.ov-dashboard-header p {
+    margin: 0;
+    color: #777;
+}
+
+.ov-dashboard-new-booking {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 6px;
+}
+
+.ov-dashboard-stats {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.ov-dashboard-stat {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-height: 88px;
+    background: #fff;
+    border: 1px solid #e2e4e7;
+    border-left: 4px solid #2271b1;
+    border-radius: 8px;
+    padding: 16px 18px;
+    box-sizing: border-box;
+}
+
+.ov-dashboard-stat > .dashicons {
+    font-size: 30px;
+    width: 30px;
+    height: 30px;
+    color: #8b9598;
+}
+
+.ov-dashboard-stat div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.ov-dashboard-stat strong {
+    font-size: 23px;
+    line-height: 1;
+}
+
+.ov-dashboard-stat div span {
+    color: #777;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+
+.ov-stat-today { border-left-color: #3498db; }
+.ov-stat-upcoming { border-left-color: #f39c12; }
+.ov-stat-completed { border-left-color: #27ae60; }
+.ov-stat-pending { border-left-color: #e74c3c; }
+.ov-stat-cancelled { border-left-color: #95a5a6; }
+
+.ov-dashboard-panel {
+    background: #fff;
+    border: 1px solid #e2e4e7;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    padding: 24px;
+}
+
+.ov-dashboard-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid #e2e4e7;
+}
+
+.ov-dashboard-panel-header h2 {
+    margin: 0 0 5px;
+    font-size: 17px;
+}
+
+.ov-dashboard-panel-header p {
+    margin: 0;
+    color: #777;
+}
+
+.ov-dashboard-empty {
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #777;
+}
+
+.ov-dashboard-empty .dashicons {
+    font-size: 36px;
+    width: 36px;
+    height: 36px;
+    color: #a7afb2;
+}
+
+.ov-today-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.ov-today-item {
+    display: grid;
+    grid-template-columns: 90px minmax(180px, 1fr) minmax(140px, 220px) 110px;
+    align-items: center;
+    gap: 18px;
+    padding: 15px 4px;
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.ov-today-item:last-child {
+    border-bottom: 0;
+}
+
+.ov-today-item:hover {
+    background: #f8f9fa;
+}
+
+.ov-today-time {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.ov-today-main {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.ov-today-main small,
+.ov-today-professional {
+    color: #777;
+}
+
+.ov-dashboard-status {
+    justify-self: start;
+    border-radius: 12px;
+    padding: 4px 9px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.ov-dashboard-status.status-pending { background: #fff3cd; color: #856404; }
+.ov-dashboard-status.status-confirmed { background: #d1ecf1; color: #0c5460; }
+.ov-dashboard-status.status-completed { background: #d4edda; color: #155724; }
+.ov-dashboard-status.status-cancelled { background: #f8d7da; color: #721c24; }
+
+.ov-dashboard-calendar-panel #ov-dashboard-calendar {
+    margin-top: 20px;
+    overflow: hidden;
+}
+
+.ov-dashboard-calendar-panel .ov-calendar-grid {
+    grid-template-columns: repeat(7, minmax(100px, 1fr));
+}
+
+@media (max-width: 1100px) {
+    .ov-dashboard-stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 782px) {
+    .ov-dashboard-header,
+    .ov-dashboard-panel-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .ov-dashboard-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .ov-today-item {
+        grid-template-columns: 70px 1fr;
+    }
+
+    .ov-today-professional,
+    .ov-dashboard-status {
+        grid-column: 2;
+    }
+}
+/* Reserva rápida, también compartida con la pantalla Nueva Reserva. */
+#ov-quick-booking-dialog { box-sizing: border-box; width: min(850px, calc(100vw - 32px)); max-height: 90vh; overflow: auto; padding: 24px; border: 1px solid #c3c4c7; border-radius: 10px; color: #1d2327; background: #fff; }
+#ov-quick-booking-dialog::backdrop { background: rgb(0 0 0 / 45%); }
+#ov-quick-booking-close { float: right; }
+#ov-admin-new-booking { max-width: 950px; }
+#ov-booking-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+#ov-notes { display: block; width: 100%; margin-top: 6px; }
+#ov-admin-new-booking [hidden] { display: none !important; }
+.ov-booking-context { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.ov-booking-context label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
+.ov-booking-context input, .ov-booking-context select { width: 100%; max-width: 100%; min-height: 38px; font-weight: 400; }
+.ov-booking-slots { display: flex; flex-wrap: wrap; gap: 8px; max-height: 220px; overflow: auto; padding: 3px; }
+.ov-booking-slots .ov-booking-slot { min-width: 74px; min-height: 40px; }
+.ov-booking-slots .ov-booking-slot[aria-pressed="true"] { background: #2271b1; color: #fff; border-color: #135e96; }
+.ov-booking-summary { background: #f0f6fc; border-left: 4px solid #2271b1; padding: 14px; font-weight: 600; }
+@media (max-width: 600px) { .ov-booking-context { grid-template-columns: 1fr; } #ov-quick-booking-dialog { padding: 16px; } }

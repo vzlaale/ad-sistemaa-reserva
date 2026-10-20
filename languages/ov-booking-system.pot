@@ -1,0 +1,147 @@
+# OV Booking System Language File
+# Copyright (C) 2025 Oscar Viedma
+# This file is distributed under the same license as the OV Booking System package.
+msgid ""
+msgstr ""
+"Project-Id-Version: OV Booking System 1.8.0\n"
+"Report-Msgid-Bugs-To: https://ovdivi.com/soporte\n"
+"POT-Creation-Date: 2025-01-07 12:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "OV Booking System"
+msgstr ""
+
+msgid "Reservas"
+msgstr ""
+
+msgid "Formularios de Reserva"
+msgstr ""
+
+msgid "Formularios"
+msgstr ""
+
+msgid "Todas las Reservas"
+msgstr ""
+
+msgid "Ajustes"
+msgstr ""
+
+msgid "Selecciona un servicio"
+msgstr ""
+
+msgid "Selecciona un profesional"
+msgstr ""
+
+msgid "Selecciona fecha y hora"
+msgstr ""
+
+msgid "Completa tu información"
+msgstr ""
+
+msgid "Confirma tu reserva"
+msgstr ""
+
+msgid "Servicio"
+msgstr ""
+
+msgid "Profesional"
+msgstr ""
+
+msgid "Fecha y Hora"
+msgstr ""
+
+msgid "Información"
+msgstr ""
+
+msgid "Confirmación"
+msgstr ""
+
+msgid "Atrás"
+msgstr ""
+
+msgid "Siguiente"
+msgstr ""
+
+msgid "Cargando..."
+msgstr ""
+
+msgid "Ha ocurrido un error"
+msgstr ""
+
+msgid "Por favor, selecciona un servicio"
+msgstr ""
+
+msgid "Por favor, selecciona fecha y hora"
+msgstr ""
+
+msgid "Por favor, completa todos los campos requeridos"
+msgstr ""
+
+msgid "Reserva creada exitosamente"
+msgstr ""
+
+msgid "No hay horarios disponibles para esta fecha"
+msgstr ""
+
+msgid "Horarios disponibles"
+msgstr ""
+
+msgid "Confirmar vía WhatsApp"
+msgstr ""
+
+msgid "Resumen de tu reserva"
+msgstr ""
+
+msgid "Cliente"
+msgstr ""
+
+msgid "Teléfono"
+msgstr ""
+
+msgid "Email"
+msgstr ""
+
+msgid "Fecha"
+msgstr ""
+
+msgid "Hora"
+msgstr ""
+
+msgid "Estado"
+msgstr ""
+
+msgid "Acciones"
+msgstr ""
+
+msgid "Editar"
+msgstr ""
+
+msgid "Eliminar"
+msgstr ""
+
+msgid "Duplicar"
+msgstr ""
+
+msgid "Activo"
+msgstr ""
+
+msgid "Inactivo"
+msgstr ""
+
+msgid "Pendiente"
+msgstr ""
+
+msgid "Confirmada"
+msgstr ""
+
+msgid "Completada"
+msgstr ""
+
+msgid "Cancelada"
+msgstr ""
