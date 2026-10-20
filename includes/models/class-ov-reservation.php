@@ -148,13 +148,32 @@ class OV_Reservation {
         return array($from, $where_sql, $params);
     }
 
-    /** IDs exactos del alcance, ordenados para poder verificar la confirmación. */
-    public function get_admin_selection_ids($filters) {
+    /** Huella de los ID filtrados; la función opcional recibe cada ID sin cargar toda la selección. */
+    public function scan_admin_selection($filters, $on_id = null) {
         global $wpdb;
+        $filters = self::normalize_admin_filters($filters);
         list($from, $where_sql, $params) = $this->admin_query_parts($filters);
-        $sql = 'SELECT r.id' . $from . $where_sql . ' ORDER BY r.id ASC';
-        $ids = $wpdb->get_col($params ? $wpdb->prepare($sql, $params) : $sql);
-        return is_array($ids) && $wpdb->last_error === '' ? $ids : false;
+        $context = hash_init('sha256');
+        hash_update($context, wp_json_encode($filters) . ':');
+        $count = 0;
+        $last_id = 0;
+        do {
+            $sql = 'SELECT r.id' . $from . $where_sql
+                . ' AND r.id > %d ORDER BY r.id ASC LIMIT 500';
+            $ids = $wpdb->get_col($wpdb->prepare($sql, array_merge($params, array($last_id))));
+            if (!is_array($ids) || $wpdb->last_error !== '') {
+                return false;
+            }
+            foreach ($ids as $id) {
+                $last_id = (int) $id;
+                hash_update($context, ($count ? ',' : '') . $last_id);
+                if ($on_id !== null && $on_id($last_id) === false) {
+                    return false;
+                }
+                $count++;
+            }
+        } while (count($ids) === 500);
+        return array('count' => $count, 'fingerprint' => hash_final($context));
     }
 
     /** Consulta paginada para el listado administrativo, con filtros en SQL. */

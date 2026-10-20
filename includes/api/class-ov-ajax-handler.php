@@ -1124,19 +1124,15 @@ class OV_Ajax_Handler {
         }
     }
 
-    private function admin_clear_fingerprint($filters, $ids) {
-        return hash('sha256', wp_json_encode($filters) . ':' . implode(',', $ids));
-    }
-
     /** Previsualizar el conjunto completo, sin aplicar paginación. */
     public function admin_preview_clear_reservations() {
         $this->check_admin_clear_request();
         $filters = $this->admin_clear_filters();
-        $ids = (new OV_Reservation())->get_admin_selection_ids($filters);
-        if ($ids === false) {
+        $selection = (new OV_Reservation())->scan_admin_selection($filters);
+        if ($selection === false) {
             wp_send_json_error(array('message' => __('Error al consultar las reservas', 'ov-booking-system')), 500);
         }
-        $count = count($ids);
+        $count = $selection['count'];
         $form = $filters['form_id'] ? (new OV_Form())->get($filters['form_id']) : null;
         $professional = $filters['professional_id'] > 0
             ? (new OV_Professional())->get($filters['professional_id']) : null;
@@ -1156,7 +1152,7 @@ class OV_Ajax_Handler {
         );
         wp_send_json_success(array(
             'count' => $count,
-            'token' => $count ? wp_create_nonce('ov_clear_selection_' . $this->admin_clear_fingerprint($filters, $ids)) : '',
+            'token' => $count ? wp_create_nonce('ov_clear_selection_' . $selection['fingerprint']) : '',
             'message' => $count
                 ? sprintf(
                     __('Se eliminarán %d reservas de todas las páginas con estos filtros:', 'ov-booking-system'),
@@ -1171,27 +1167,42 @@ class OV_Ajax_Handler {
         $this->check_admin_clear_request();
         $filters = $this->admin_clear_filters();
         $model = new OV_Reservation();
-        $ids = $model->get_admin_selection_ids($filters);
-        if ($ids === false) {
+        // php://temp conserva los ID exactos y vuelca a disco tras 2 MB.
+        $stream = @fopen('php://temp/maxmemory:2097152', 'w+');
+        if ($stream === false) {
+            wp_send_json_error(array('message' => __('No fue posible preparar el borrado.', 'ov-booking-system')), 500);
+        }
+        $selection = $model->scan_admin_selection($filters, static function($id) use ($stream) {
+            $line = $id . "\n";
+            return fwrite($stream, $line) === strlen($line);
+        });
+        if ($selection === false) {
+            fclose($stream);
             wp_send_json_error(array('message' => __('Error al consultar las reservas', 'ov-booking-system')), 500);
         }
         $token = $_POST['selection_token'] ?? '';
-        $fingerprint = $this->admin_clear_fingerprint($filters, $ids);
-        if (!is_scalar($token) || !wp_verify_nonce(wp_unslash((string) $token), 'ov_clear_selection_' . $fingerprint)) {
+        if (!is_scalar($token) || !wp_verify_nonce(wp_unslash((string) $token), 'ov_clear_selection_' . $selection['fingerprint'])) {
+            fclose($stream);
             wp_send_json_error(array('message' => __('El listado cambió. Revisa la cantidad y confirma nuevamente.', 'ov-booking-system')), 409);
         }
         $deleted_count = 0;
         $failed_count = 0;
-        foreach (array_chunk($ids, 200) as $batch) {
+        rewind($stream);
+        do {
+            $batch = array();
+            for ($index = 0; $index < 200 && ($line = fgets($stream)) !== false; $index++) {
+                $batch[] = (int) $line;
+            }
             foreach ($batch as $id) {
                 // El modelo emite ov_booking_reservation_deleted para cada add-on.
-                if ($model->delete((int) $id) === 1) {
+                if ($model->delete($id) === 1) {
                     $deleted_count++;
                 } else {
                     $failed_count++;
                 }
             }
-        }
+        } while ($batch);
+        fclose($stream);
         if ($failed_count) {
             wp_send_json_error(array('message' => sprintf(__('Se eliminaron %1$d reservas; %2$d no se pudieron eliminar.', 'ov-booking-system'), $deleted_count, $failed_count)), 500);
         }

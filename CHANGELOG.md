@@ -2,7 +2,7 @@
 
 ## Sin publicar
 
-- El borrado masivo previsualiza y verifica las reservas que coinciden con todos los filtros del listado antes de eliminar sus ID en lotes.
+- El borrado masivo previsualiza y verifica las reservas que coinciden con todos los filtros del listado; recorre los ID con memoria acotada y los elimina en lotes.
 - El evento de eliminación se emite solo cuando una reserva fue realmente borrada.
 - La reactivación de reservas canceladas comprueba disponibilidad dentro del bloqueo del formulario en ambas rutas de edición administrativa.
 - Módulos sin licencia ya no muestran una acción de desactivación que no afecta su funcionamiento; sus ajustes siguen controlando el add-on.
