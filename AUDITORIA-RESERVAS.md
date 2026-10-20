@@ -99,6 +99,7 @@ Se alinearon los títulos de `README.md`, `INSTALACION.md` y `CAMPOS-DINAMICOS.m
 
 ## Seguimiento de riesgos prioritarios en `develop`
 
+- Estas correcciones, junto con la consulta del RUT en el editor, se agrupan como plugin `1.8.2` en pruebas. La versión de esquema continúa en `1.8.0` y WhatsApp mantiene su versión independiente `1.0.3`.
 - Hallazgo 1: el listado y el borrado comparten filtros SQL. El borrado muestra cantidad y alcance, verifica que la selección no cambió y elimina únicamente esos ID en lotes, con memoria acotada. Pendiente de prueba en WordPress staging.
 - Hallazgo 2: ambas rutas administrativas comprueban la disponibilidad dentro del bloqueo por formulario al reactivar una reserva cancelada. Pendiente de prueba concurrente en WordPress staging.
 - Hallazgo 3: los módulos sin licencia se muestran como instalados y ya no ofrecen una desactivación ineficaz; la petición directa también se rechaza. El ajuste propio de WhatsApp 1.0.3 sigue controlando el envío. La integración de ambos controles queda para el trabajo del add-on.

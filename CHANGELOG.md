@@ -1,6 +1,6 @@
 # Changelog
 
-## Sin publicar
+## 1.8.2 - En pruebas, pendiente de publicación
 
 - El borrado masivo previsualiza y verifica las reservas que coinciden con todos los filtros del listado; recorre los ID con memoria acotada y los elimina en lotes.
 - El evento de eliminación se emite solo cuando una reserva fue realmente borrada.

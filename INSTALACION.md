@@ -1,4 +1,4 @@
-# Instalación y actualización — OV Booking 1.8.1
+# Instalación y actualización — OV Booking 1.8.2
 
 ## Instalación nueva
 
@@ -12,19 +12,19 @@
 El teléfono es obligatorio. Se aceptan números internacionales E.164 y, para Chile,
 `+56 9 XXXX XXXX`, `569XXXXXXXX` o `9XXXXXXXX`; se guarda como `569XXXXXXXX`.
 
-## Actualización desde 1.7 a 1.8.1
+## Actualización desde 1.7 a 1.8.2
 
 1. Crea un respaldo verificable de base de datos y archivos.
 2. Ensaya la actualización sobre un clon de producción.
 3. Sustituye el plugin conservando el slug `ov-booking-system`.
-4. Instala la versión 1.8.1 y actívala o carga el panel para ejecutar la migración idempotente del esquema 1.8.0.
-5. Verifica que `ov_booking_version` sea `1.8.1` y `ov_booking_db_version` sea `1.8.0`.
+4. Instala la versión 1.8.2 y actívala o carga el panel para ejecutar la migración idempotente del esquema 1.8.0.
+5. Verifica que `ov_booking_version` sea `1.8.2` y `ov_booking_db_version` sea `1.8.0`.
 
 La migración añade idempotencia, origen de reserva, huella de IP no reversible, índices
 de disponibilidad y contadores antiabuso. También asegura la tabla de pacientes. No
 elimina reservas ni columnas históricas.
 
-La versión 1.8.1 corrige seguridad y exportación sin añadir otra migración de esquema.
+Las versiones 1.8.1 y 1.8.2 corrigen el funcionamiento sin añadir otra migración de esquema.
 
 ## Google Calendar
 

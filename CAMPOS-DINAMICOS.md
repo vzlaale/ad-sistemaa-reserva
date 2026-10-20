@@ -1,4 +1,4 @@
-# Campos dinámicos — OV Booking 1.8.1
+# Campos dinámicos — OV Booking 1.8.2
 
 ## Campos estándar
 
