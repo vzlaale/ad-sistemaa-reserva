@@ -75,6 +75,20 @@ class OV_Professional {
 }
 class OV_Availability {
     public static $calls = 0;
+    public function get_month_available_dates($form, $service, $start_date, $end_date, $professional_ids) {
+        $dates = array();
+        for ($date = new DateTimeImmutable($start_date); $date <= new DateTimeImmutable($end_date); $date = $date->modify('+1 day')) {
+            foreach ($professional_ids as $professional_id) {
+                foreach ($this->get_available_slots($form->id, $service->id, $date->format('Y-m-d'), $professional_id) as $slot) {
+                    if (!empty($slot['available'])) {
+                        $dates[] = $date->format('Y-m-d');
+                        continue 3;
+                    }
+                }
+            }
+        }
+        return $dates;
+    }
     public function get_available_slots($form_id, $service_id, $date, $professional_id = null) {
         ++self::$calls;
         return array(array(

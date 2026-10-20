@@ -63,6 +63,7 @@ class OV_Booking_System {
         require_once OV_BOOKING_PLUGIN_DIR . 'includes/services/class-ov-csv-export.php';
         
         // Helpers
+        require_once OV_BOOKING_PLUGIN_DIR . 'includes/helpers/class-ov-month-availability-data.php';
         require_once OV_BOOKING_PLUGIN_DIR . 'includes/helpers/class-ov-availability.php';
         require_once OV_BOOKING_PLUGIN_DIR . 'includes/helpers/class-ov-datetime.php';
         require_once OV_BOOKING_PLUGIN_DIR . 'includes/helpers/class-ov-validation.php';

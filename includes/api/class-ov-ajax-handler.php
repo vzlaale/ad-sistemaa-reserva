@@ -91,12 +91,13 @@ class OV_Ajax_Handler {
         ));
     }
 
-    private function get_public_availability_form($form_id, $service_id, $professional_id) {
+    private function get_public_availability_form($form_id, $service_id, $professional_id, &$service_out = null) {
         $form = (new OV_Form())->get($form_id);
         $service = (new OV_Service())->get($service_id);
         if (!$form || $form->status !== 'active' || !$service || empty($service->active) || (int) $service->form_id !== $form_id) {
             return false;
         }
+        $service_out = $service;
         if (empty($form->enable_professionals)) {
             return $professional_id === null ? $form : false;
         }
@@ -411,7 +412,8 @@ class OV_Ajax_Handler {
 
             $year = (int) $year_text;
             $month = (int) $month_text;
-            $form = $this->get_public_availability_form($form_id, $service_id, $professional_id);
+            $service = null;
+            $form = $this->get_public_availability_form($form_id, $service_id, $professional_id, $service);
             if (!$form) {
                 wp_send_json_error(array('message' => __('Calendario no disponible.', 'ov-booking-system')), 400);
             }
@@ -431,75 +433,26 @@ class OV_Ajax_Handler {
                 }
             }
 
-            // Nota: no usamos cache aquí para que los cupos disponibles se actualicen
-            // inmediatamente después de crear, borrar o cambiar reservas.
-
-            $availability = new OV_Availability();
-
-            // Si es "cualquier profesional", obtener lista una vez para evaluar disponibilidad por día
-            $any_pros = array();
+            // El snapshot vive solo durante esta petición; la siguiente ve nuevas reservas.
+            $professional_ids = array($professional_id);
             if ($professional_id === 0) {
-                if ($form && !empty($form->enable_professionals) && (!isset($form->allow_any_professional) || $form->allow_any_professional)) {
-                    $professional_model = new OV_Professional();
-                    $any_pros = $professional_model->get_by_service($service_id, true, true);
-                }
-                if (empty($any_pros)) {
+                $pros = (new OV_Professional())->get_by_service($service_id, true, true);
+                if (empty($pros)) {
                     wp_send_json_success(array('available_dates' => array()));
                 }
+                $professional_ids = array_map(function($prof) { return (int) $prof->id; }, $pros);
             }
 
             // Calcular rango del mes
             $start_date = sprintf('%04d-%02d-01', $year, $month);
             $days_in_month = (int) date('t', strtotime($start_date));
 
-            $available_dates = array();
-
-            for ($day = 1; $day <= $days_in_month; $day++) {
-                $date = sprintf('%04d-%02d-%02d', $year, $month, $day);
-                if ($date < $window['start_date']) {
-                    continue;
-                }
-
-                // Reusar tu lógica real: si devuelve slots disponibles -> ese día sí se habilita
-                // Si professional_id = 0, el día es válido si ALGÚN profesional tiene al menos 1 slot disponible
-                if ($professional_id === 0 && !empty($any_pros)) {
-                    $slots = array();
-                    foreach ($any_pros as $prof) {
-                        $slots = $availability->get_available_slots($form_id, $service_id, $date, (int) $prof->id);
-                        // Si hay alguno disponible, no necesitamos seguir
-                        $has = false;
-                        if (!empty($slots)) {
-                            foreach ($slots as $s) {
-                                if (!empty($s['available'])) { $has = true; break; }
-                            }
-                        }
-                        if ($has) {
-                            $available_dates[] = $date;
-                            continue 2; // continuar con siguiente día
-                        }
-                    }
-                    // Ningún profesional tuvo disponibilidad -> continuar
-                    continue;
-                }
-
-                $slots = $availability->get_available_slots($form_id, $service_id, $date, $professional_id === 0 ? null : $professional_id);
-
-                // Nota: algunos slots pueden venir con available=false por booked/break/past.
-                // Nos interesa que exista al menos 1 disponible.
-                $has_available = false;
-                if (!empty($slots)) {
-                    foreach ($slots as $slot) {
-                        if (!empty($slot['available'])) {
-                            $has_available = true;
-                            break;
-                        }
-                    }
-                }
-
-                if ($has_available) {
-                    $available_dates[] = $date;
-                }
-            }
+            $end_date = sprintf('%04d-%02d-%02d', $year, $month, $days_in_month);
+            $first_date = max($start_date, $window['start_date']);
+            $availability = new OV_Availability();
+            $available_dates = $availability->get_month_available_dates(
+                $form, $service, $first_date, $end_date, $professional_ids
+            );
 
             wp_send_json_success(array(
                 'available_dates' => $available_dates
