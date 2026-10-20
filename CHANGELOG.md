@@ -1,5 +1,9 @@
 # Changelog
 
+## Sin publicar
+
+- El editor de «Todas las Reservas» muestra el RUT guardado en cada reserva como dato de solo lectura para facilitar una nueva cita.
+
 ## 1.8.1 - Correcciones de seguridad y exportación
 
 - La opción `ov_booking_version` y los metadatos de documentación reflejan 1.8.1; la versión del esquema permanece en 1.8.0.

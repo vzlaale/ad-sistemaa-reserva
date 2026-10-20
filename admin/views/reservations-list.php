@@ -383,8 +383,8 @@ if ($view === 'calendar') {
                                     ? json_decode($reservation->customer_data, true)
                                     : $reservation->customer_data;
 
-                                if (is_array($customer_data) && !empty($customer_data['rut'])) {
-                                    $rut = trim($customer_data['rut']);
+                                if (is_array($customer_data) && isset($customer_data['rut']) && is_scalar($customer_data['rut'])) {
+                                    $rut = trim((string) $customer_data['rut']);
                                 }
                             }
                             ?>
@@ -485,6 +485,7 @@ if ($view === 'calendar') {
                                 class="button button-small ov-edit-reservation"
                                 data-id="<?php echo esc_attr($reservation->id); ?>"
                                 data-name="<?php echo esc_attr($reservation->customer_name); ?>"
+                                data-rut="<?php echo esc_attr($rut); ?>"
                                 data-email="<?php echo esc_attr($reservation->customer_email); ?>"
                                 data-phone="<?php echo esc_attr($reservation->customer_phone); ?>"
                                 data-date="<?php echo esc_attr($reservation->booking_date); ?>"
@@ -673,6 +674,7 @@ if ($view === 'calendar') {
             <h2 style="margin-top:0;"><?php _e('Editar reserva', 'ov-booking-system'); ?></h2>
             <input type="hidden" id="ov-edit-reservation-id">
             <p><label><?php _e('Cliente', 'ov-booking-system'); ?><br><input type="text" id="ov-edit-customer-name" class="regular-text" style="width:100%;"></label></p>
+            <p><label><?php esc_html_e('RUT', 'ov-booking-system'); ?><br><input type="text" id="ov-edit-customer-rut" class="regular-text" style="width:100%;" placeholder="<?php esc_attr_e('No registrado', 'ov-booking-system'); ?>" readonly></label></p>
             <p><label><?php _e('Email', 'ov-booking-system'); ?><br><input type="email" id="ov-edit-customer-email" class="regular-text" style="width:100%;"></label></p>
             <p><label><?php _e('Teléfono', 'ov-booking-system'); ?><br><input type="text" id="ov-edit-customer-phone" class="regular-text" style="width:100%;"></label></p>
             <div style="display:flex; gap:12px;">
@@ -709,6 +711,7 @@ if ($view === 'calendar') {
             const $modal = $('#ov-edit-reservation-modal');
             $('#ov-edit-reservation-id').val(data.id);
             $('#ov-edit-customer-name').val(data.name);
+            $('#ov-edit-customer-rut').val(data.rut || '');
             $('#ov-edit-customer-email').val(data.email);
             $('#ov-edit-customer-phone').val(data.phone);
             $('#ov-edit-booking-date').val(data.date);
