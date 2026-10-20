@@ -379,6 +379,19 @@
     gap: 4px;
 }
 
+.ov-calendar-header .ov-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.ov-calendar-status:not(:empty) {
+    margin-top: 0.75rem;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
 .ov-calendar-day {
     aspect-ratio: 1.4 / 1;
     display: flex;
@@ -405,6 +418,12 @@
     color: var(--ov-bs-text-light);
     cursor: not-allowed;
     opacity: 0.5;
+}
+
+.ov-calendar-day.ov-pending {
+    color: var(--ov-bs-text-light);
+    cursor: wait;
+    opacity: 0.65;
 }
 
 .ov-calendar-day.ov-available {

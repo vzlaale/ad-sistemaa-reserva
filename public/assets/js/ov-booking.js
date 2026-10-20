@@ -1,6 +1,6 @@
 /**
  * OV Booking System - Frontend JavaScript
- * Version: 1.8.1
+ * Version: 1.8.3
  * Author: Oscar Viedma
  */
 
@@ -108,6 +108,8 @@ window.OVBooking.openWhatsApp = function(phone, message) {
             this.formConfig = null;
             this.currentMonth = new Date();
             this.selectedDate = null;
+            this.monthRequest = null;
+            this.monthRequestId = 0;
             
             this.init();
         }
@@ -130,7 +132,6 @@ window.OVBooking.openWhatsApp = function(phone, message) {
         init() {
             this.loadFormConfig();
             this.attachEventListeners();
-            this.loadServices();
         }
 
         attachEventListeners() {
@@ -153,10 +154,16 @@ window.OVBooking.openWhatsApp = function(phone, message) {
                     form_id: this.formId
                 },
                 success: (response) => {
-                    if (response.success) {
+                    if (response && response.success && response.data && response.data.booking_window) {
                         this.formConfig = response.data;
+                        const start = this.formConfig.booking_window.start_date.split('-').map(Number);
+                        this.currentMonth = new Date(start[0], start[1] - 1, 1);
+                        this.loadServices();
+                    } else {
+                        this.showError(this.t('error', 'No fue posible cargar el formulario.'));
                     }
-                }
+                },
+                error: () => this.showError(this.t('error', 'No fue posible cargar el formulario.'))
             });
         }
 
@@ -357,14 +364,25 @@ window.OVBooking.openWhatsApp = function(phone, message) {
         }
 
         renderCalendar() {
+            if (!this.formConfig || !this.formConfig.booking_window) {
+                return;
+            }
+            this.selectedDate = null;
+            this.bookingData.date = null;
+            this.bookingData.time = null;
+            this.resetCreatedBooking();
+            this.container.find('#ov-time-slots').hide();
             const year = this.currentMonth.getFullYear();
             const month = this.currentMonth.getMonth();
+            const windowStart = this.formConfig.booking_window.start_date;
             const monthLabel = this.currentMonth.toLocaleDateString(this.locale(), { month: 'long', year: 'numeric' });
 
             $('#ov-current-month', this.container).text(monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1));
+            this.updateMonthNavigation();
 
             const grid = this.container.find('#ov-calendar-grid');
             grid.empty();
+            this.container.find('#ov-calendar-status').empty();
 
             // Días de la semana
             const weekStart = (this.formConfig?.week_starts_on ?? 1);
@@ -391,46 +409,39 @@ window.OVBooking.openWhatsApp = function(phone, message) {
 
             // Días del mes
             const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
 
             for (let day = 1; day <= daysInMonth; day++) {
                 const currentDate = new Date(year, month, day);
-                currentDate.setHours(0, 0, 0, 0);
                 const dateStr = this.formatDate(currentDate);
 
                 const dayElement = $(`<div class="ov-calendar-day" data-date="${dateStr}">${day}</div>`);
 
                 // Verificar si es hoy
-                if (currentDate.getTime() === today.getTime()) {
+                if (dateStr === windowStart) {
                     dayElement.addClass('ov-today');
                 }
 
                 // Verificar si es día pasado
-                if (currentDate < today) {
+                if (dateStr < windowStart) {
                     dayElement.addClass('ov-disabled');
                 } 
                 // Para anticipación, no bloqueamos el día completo
                 // El backend filtrará los slots individuales que no cumplan
                 else {
-                    dayElement.addClass('ov-available');
+                    dayElement.addClass('ov-eligible ov-pending');
                 }
 
                 // Verificar si es festivo
                 if (this.formConfig && this.formConfig.holidays && this.formConfig.holidays.includes(dateStr)) {
-                    dayElement.removeClass('ov-available').addClass('ov-disabled');
+                    dayElement.removeClass('ov-eligible ov-pending').addClass('ov-disabled');
                 }
 
                 // Verificar si es día laborable
                 if (this.formConfig && this.formConfig.working_days) {
                     const dayOfWeek = currentDate.getDay();
                     if (!this.formConfig.working_days.includes(dayOfWeek)) {
-                        dayElement.removeClass('ov-available').addClass('ov-disabled');
+                        dayElement.removeClass('ov-eligible ov-pending').addClass('ov-disabled');
                     }
-                }
-
-                if (dayElement.hasClass('ov-available')) {
-                    dayElement.on('click', () => this.selectDate(currentDate, dateStr, dayElement));
                 }
 
                 grid.append(dayElement);
@@ -452,55 +463,67 @@ window.OVBooking.openWhatsApp = function(phone, message) {
         }
 
         fetchMonthAvailability(year, month) {
-          const self = this;
-
-          // serviceId es obligatorio para saber disponibilidad real
-          if (!self.bookingData || !self.bookingData.serviceId) return;
-
-          const ajaxData = {
-            action: 'ov_get_month_availability',
-            form_id: self.formId,
-            service_id: self.bookingData.serviceId,
-            year: year,
-            month: month + 1 // JS month 0-11, backend 1-12
-          };
-
-          if (typeof self.bookingData.professionalId !== 'undefined' && self.bookingData.professionalId !== null) {
-            ajaxData.professional_id = self.bookingData.professionalId;
-          }
-
-          jQuery.get(ovBooking.ajaxurl, ajaxData, function(response) {
-            if (!response || !response.success) return;
-
-            const availableDates = (response.data && response.data.available_dates) ? response.data.available_dates : [];
-
-            // Recorremos todos los días del calendario
-            self.container.find('#ov-calendar-grid .ov-calendar-day[data-date]').each(function() {
-              const $day = jQuery(this);
-              const dateStr = $day.data('date');
-
-              if (!dateStr) return;
-
-              // Si ya está disabled por pasado/festivo/etc, no tocar
-              if ($day.hasClass('ov-disabled')) return;
-
-              // Si NO está en la lista -> lo deshabilitamos
-                if (!availableDates.includes(dateStr)) {
-                  $day
-                    .removeClass('ov-available ov-selected ov-today')
-                    .addClass('ov-disabled')
-                    .off('click'); 
-                }
-            });
-
-            // Si el día seleccionado quedó disabled, limpiar selección y slots
-            const $selected = self.container.find('#ov-calendar-grid .ov-calendar-day.ov-selected');
-            if ($selected.length && $selected.hasClass('ov-disabled')) {
-              $selected.removeClass('ov-selected');
-              self.container.find('#ov-time-grid').empty().addClass('ov-no-slots')
-                .html('<div class="ov-no-slots-message">' + this.t('no_slots_available', 'No hay horarios disponibles para esta fecha') + '</div>');
+            const requestId = ++this.monthRequestId;
+            if (this.monthRequest) {
+                this.monthRequest.abort();
             }
-          });
+            const days = this.container.find('#ov-calendar-grid .ov-calendar-day.ov-eligible');
+            days.removeClass('ov-available ov-disabled').addClass('ov-pending').off('click');
+            const status = this.container.find('#ov-calendar-status');
+            status.empty().text(this.t('loading', 'Consultando disponibilidad...'));
+
+            if (!this.bookingData || !this.bookingData.serviceId) {
+                this.showMonthAvailabilityError(this.t('error', 'No fue posible consultar la disponibilidad.'), year, month);
+                return;
+            }
+            const ajaxData = {
+                action: 'ov_get_month_availability',
+                form_id: this.formId,
+                service_id: this.bookingData.serviceId,
+                year: year,
+                month: month + 1
+            };
+            if (this.bookingData.professionalId !== null && typeof this.bookingData.professionalId !== 'undefined') {
+                ajaxData.professional_id = this.bookingData.professionalId;
+            }
+
+            this.monthRequest = $.ajax({ url: ovBooking.ajaxurl, type: 'GET', data: ajaxData })
+                .done((response) => {
+                    if (requestId !== this.monthRequestId) return;
+                    if (!response || !response.success || !response.data || !Array.isArray(response.data.available_dates)) {
+                        const message = response && response.data && response.data.message;
+                        this.showMonthAvailabilityError(message || this.t('error', 'No fue posible consultar la disponibilidad.'), year, month);
+                        return;
+                    }
+                    const availableDates = new Set(response.data.available_dates);
+                    days.each((_, element) => {
+                        const day = $(element);
+                        const dateStr = day.attr('data-date');
+                        day.removeClass('ov-pending');
+                        if (availableDates.has(dateStr)) {
+                            day.addClass('ov-available');
+                            day.on('click', () => this.selectDate(new Date(year, month, Number(dateStr.slice(-2))), dateStr, day));
+                        } else {
+                            day.addClass('ov-disabled');
+                        }
+                    });
+                    status.empty();
+                })
+                .fail((xhr, textStatus) => {
+                    if (requestId !== this.monthRequestId || textStatus === 'abort') return;
+                    const message = xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message;
+                    this.showMonthAvailabilityError(message || this.t('error', 'No fue posible consultar la disponibilidad.'), year, month);
+                });
+        }
+
+        showMonthAvailabilityError(message, year, month) {
+            this.container.find('#ov-calendar-grid .ov-calendar-day.ov-eligible')
+                .removeClass('ov-available ov-pending').addClass('ov-disabled').off('click');
+            const status = this.container.find('#ov-calendar-status');
+            status.empty().append($('<span>').text(String(message)));
+            status.append($('<button type="button" class="ov-btn ov-btn-secondary">')
+                .text(this.t('retry', 'Reintentar'))
+                .on('click', () => this.fetchMonthAvailability(year, month)));
         }
 
         loadTimeSlots(date) {
@@ -1127,8 +1150,20 @@ window.OVBooking.openWhatsApp = function(phone, message) {
             return `${year}-${month}-${day}`;
         }
 
+        updateMonthNavigation() {
+            const window = this.formConfig.booking_window;
+            const shownMonth = `${this.currentMonth.getFullYear()}-${String(this.currentMonth.getMonth() + 1).padStart(2, '0')}`;
+            $('#ov-prev-month', this.container).prop('disabled', shownMonth <= window.start_month);
+            $('#ov-next-month', this.container).prop('disabled', shownMonth >= window.end_month);
+        }
+
         changeMonth(direction) {
-            this.currentMonth.setMonth(this.currentMonth.getMonth() + direction);
+            if (!this.formConfig || !this.formConfig.booking_window) return;
+            const next = new Date(this.currentMonth.getFullYear(), this.currentMonth.getMonth() + direction, 1);
+            const nextMonth = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+            const window = this.formConfig.booking_window;
+            if (nextMonth < window.start_month || nextMonth > window.end_month) return;
+            this.currentMonth = next;
             this.renderCalendar();
         }
 

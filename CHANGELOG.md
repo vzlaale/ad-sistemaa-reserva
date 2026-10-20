@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.8.3 - En pruebas, pendiente de publicación
+
+- La disponibilidad y la reserva públicas aceptan el mes actual y los cinco siguientes según la zona horaria del formulario.
+- Las consultas mensuales y diarias validan IDs, fechas y relaciones públicas antes de calcular cupos.
+- La disponibilidad mensual limita a 60 consultas anónimas por IP cada 10 minutos mediante la tabla antiabuso existente.
+- El calendario bloquea meses fuera del horizonte y solo habilita días tras recibir disponibilidad; muestra un reintento ante errores.
+- Sin cambios de esquema: `ov_booking_db_version` permanece en `1.8.0`.
+
 ## 1.8.2 - En pruebas, pendiente de publicación
 
 - El borrado masivo previsualiza y verifica las reservas que coinciden con todos los filtros del listado; recorre los ID con memoria acotada y los elimina en lotes.
