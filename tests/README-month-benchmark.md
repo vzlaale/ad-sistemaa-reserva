@@ -1,4 +1,21 @@
-# Medición pendiente: disponibilidad mensual
+# Medición de disponibilidad mensual en clon
+
+El clon `agenda.geneal.cl` permite medir la ruta AJAX real mediante el plugin
+temporal `tests/ov-booking-benchmark/`. Su panel está en Herramientas → OV Booking
+Audit Probe y requiere un administrador y un nonce. Se activa únicamente en ese
+host y registra `SAVEQUERIES` mientras está instalado. Tras la comparación, se
+desactiva y elimina. El JSON exportado contiene tiempos, conteos, fechas,
+agregados de reservas y `EXPLAIN`, sin datos de pacientes.
+
+Para cada versión y caso, seleccionar el mismo formulario, servicio, mes y modo
+de profesional; ejecutar 20 muestras secuenciales. La primera muestra se
+conserva por separado. Comparar mediana y p95 de las 19 restantes, además de
+`available_dates` y del contexto de reservas antes y después. Si el contexto
+cambia, descartar la serie. El `EXPLAIN` de `DATE_ADD` solo aparece cuando la
+ruta consulta un servicio de varios días. Si el clon no tiene tal servicio o
+historial amplio, declarar ese límite en el resultado.
+
+## Alternativa con WP-CLI
 
 Esta medición debe ejecutarse en un **clon WordPress/MySQL** con la misma base de datos para OV Booking 1.8.3 y 1.8.5. El ensayo local de PHP no mide consultas reales ni latencia del endpoint. Mantener la tarea 02 pendiente de auditoría hasta registrar estos resultados.
 
