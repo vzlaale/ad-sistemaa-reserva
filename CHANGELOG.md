@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.8.5 - En pruebas, pendiente de publicación
+
+- Las consultas anónimas mensuales y diarias comparten 60 solicitudes por IP cada 10 minutos. Los parámetros inválidos no consumen el contador; fallos del contador responden 503.
+- El calendario decide los días seleccionables a partir de `available_dates`, respetando la ventana pública. Los horarios especiales y festivos por profesional ya no quedan ocultos por filtros generales del navegador.
+- Los errores de los horarios diarios muestran el mensaje del servidor, incluidos los límites de frecuencia.
+- Sin cambios en la consulta de reservas de varios días ni en el esquema `1.8.0`; la medición con historial amplio y `EXPLAIN` sigue pendiente.
+
 ## 1.8.4 - En pruebas, pendiente de publicación
 
 - La disponibilidad mensual precarga horarios, excepciones, festivos, descansos y reservas una vez por solicitud.
