@@ -1,4 +1,4 @@
-# OV Booking System 1.8.5
+# OV Booking System 1.8.6
 
 Plugin de reservas para WordPress, compatible con Divi y otros temas.
 
@@ -23,6 +23,8 @@ mensuales anónimas. El calendario usa la zona horaria configurada del formulari
 La versión 1.8.4 precarga los datos de cada consulta mensual y evita las consultas por horario.
 La versión 1.8.5 comparte el límite anónimo entre consultas mensuales y diarias; el calendario
 habilita únicamente las fechas que devuelve el servidor, incluidos horarios especiales.
+La versión 1.8.6 calcula los días laborables de los profesionales en una consulta de lote,
+conservando el campo `working_days` de la configuración pública.
 El esquema de base de datos permanece en 1.8.0.
 
 ## Requisitos asumidos

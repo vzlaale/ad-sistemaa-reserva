@@ -106,6 +106,7 @@ class OV_Availability {
 class OV_Schedule {
     public function get_holidays($form_id) { return array(); }
     public function get_by_form($form_id) { return array(); }
+    public function get_working_days_for_form($form_id, $include_professionals = false) { return array(); }
 }
 class OV_DateTime {
     public function get_current_datetime($timezone) {

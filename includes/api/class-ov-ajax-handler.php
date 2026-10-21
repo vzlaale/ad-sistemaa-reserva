@@ -910,29 +910,8 @@ class OV_Ajax_Handler {
             $schedule_model = new OV_Schedule();
             $holidays = $schedule_model->get_holidays($form_id);
 
-            // Obtener días laborables de los schedules
-            $schedules = $schedule_model->get_by_form($form_id);
-            $working_days = array();
-            foreach ($schedules as $schedule) {
-                if (!in_array($schedule->day_of_week, $working_days)) {
-                    $working_days[] = (int) $schedule->day_of_week;
-                }
-            }
-
-            // Con profesionales, el calendario debe conocer la unión de sus
-            // horarios individuales. No depender únicamente del horario
-            // general legado del formulario.
-            if (!empty($form->enable_professionals)) {
-                $professional_model = new OV_Professional();
-                foreach ($professional_model->get_by_form($form_id, true) as $professional) {
-                    foreach ($schedule_model->get_by_form($form_id, (int) $professional->id) as $schedule) {
-                        if (!in_array((int) $schedule->day_of_week, $working_days, true)) {
-                            $working_days[] = (int) $schedule->day_of_week;
-                        }
-                    }
-                }
-            }
-            sort($working_days);
+            // Conservar el campo público sin consultar los horarios uno por uno.
+            $working_days = $schedule_model->get_working_days_for_form($form_id, !empty($form->enable_professionals));
 
             $config = array(
                 'enable_professionals' => (bool) $form->enable_professionals,

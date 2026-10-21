@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.8.6 - En pruebas, pendiente de publicación
+
+- La configuración pública conserva `working_days` pero calcula la unión de horarios generales y de profesionales activos con una consulta de lote, sin consultas por profesional.
+- Sin cambios en disponibilidad mensual, en `DATE_ADD` ni en el esquema 1.8.0.
+
 ## 1.8.5 - En pruebas, pendiente de publicación
 
 - Las consultas anónimas mensuales y diarias comparten 60 solicitudes por IP cada 10 minutos. Los parámetros inválidos no consumen el contador; fallos del contador responden 503.

@@ -37,6 +37,40 @@ class OV_Schedule {
         return $this->db->get_results('schedules', $where, 'day_of_week ASC');
     }
 
+    /** Mantener la unión histórica de días generales y profesionales activos sin consultas por profesional. */
+    public function get_working_days_for_form($form_id, $include_professionals = false) {
+        $days = array();
+        foreach ((array) $this->get_by_form($form_id) as $schedule) {
+            $days[(int) $schedule->day_of_week] = true;
+        }
+
+        if ($include_professionals) {
+            global $wpdb;
+            $schedule_table = $wpdb->prefix . 'ov_booking_professional_schedules';
+            $professional_table = $wpdb->prefix . 'ov_booking_professionals';
+
+            // La tabla puede no existir en instalaciones heredadas; comprobarla solo una vez.
+            if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $schedule_table)) === $schedule_table) {
+                $rows = $wpdb->get_col($wpdb->prepare(
+                    "SELECT DISTINCT ps.day_of_week FROM {$schedule_table} ps
+                     INNER JOIN {$professional_table} p ON p.id = ps.professional_id
+                     WHERE p.form_id = %d AND p.active = 1 AND ps.active = 1",
+                    (int) $form_id
+                ));
+                if ($rows === null || !empty($wpdb->last_error)) {
+                    throw new RuntimeException('No se pudieron cargar los días laborables del formulario.');
+                }
+                foreach ($rows as $day) {
+                    $days[(int) $day] = true;
+                }
+            }
+        }
+
+        $working_days = array_keys($days);
+        sort($working_days, SORT_NUMERIC);
+        return $working_days;
+    }
+
     /**
      * Obtener horario por día de la semana
      */
