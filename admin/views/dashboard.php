@@ -23,7 +23,7 @@ $forms = $form_model->get_all();
 $reservations = array();
 
 foreach ($forms as $form) {
-    $form_reservations = $reservation_model->get_by_form($form->id, null, 1000);
+    $form_reservations = $reservation_model->get_by_form($form->id, null, 1000, true);
     if (!empty($form_reservations)) {
         $reservations = array_merge($reservations, $form_reservations);
     }
@@ -89,6 +89,22 @@ $status_label = array(
     'cancelled' => __('Cancelada', 'ov-booking-system'),
 );
 
+$reservation_rut = static function($reservation) {
+    $customer_data = $reservation->customer_data ?? null;
+    if (is_string($customer_data)) {
+        $customer_data = json_decode($customer_data, true);
+    }
+    if (is_array($customer_data) && isset($customer_data['rut']) && is_scalar($customer_data['rut'])) {
+        $rut = trim((string) $customer_data['rut']);
+        if ($rut !== '') {
+            return $rut;
+        }
+    }
+    return isset($reservation->linked_patient_rut) && is_scalar($reservation->linked_patient_rut)
+        ? trim((string) $reservation->linked_patient_rut)
+        : '';
+};
+
 foreach ($reservations as $reservation) {
     $service = $service_model->get($reservation->service_id);
     $professional = !empty($reservation->professional_id)
@@ -139,6 +155,7 @@ foreach ($reservations as $reservation) {
             'id' => (string) $reservation->id,
             'bookingId' => (string) $reservation->booking_id,
             'customerName' => $reservation->customer_name,
+            'customerRut' => $reservation_rut($reservation),
             'customerEmail' => $reservation->customer_email,
             'customerPhone' => $reservation->customer_phone,
             'serviceName' => $service_name,
@@ -147,7 +164,6 @@ foreach ($reservations as $reservation) {
             'formId' => (string) intval($reservation->form_id),
             'formName' => (function() use ($forms, $reservation) { foreach ($forms as $dashboard_form) { if ((int) $dashboard_form->id === (int) $reservation->form_id) return $dashboard_form->name; } return ''; })(),
             'status' => $reservation->status,
-            'statusLabel' => $status_label[$reservation->status] ?? ucfirst($reservation->status),
             'notes' => $reservation->notes,
             'price' => $price,
             'date' => $reservation->booking_date,
@@ -270,12 +286,13 @@ $export_url = add_query_arg(array('action' => 'ov_booking_export_csv', '_wpnonce
             <input type="hidden" id="ov-dashboard-edit-id">
             <div class="ov-dashboard-edit-grid">
                 <label><?php _e('Cliente', 'ov-booking-system'); ?><input type="text" id="ov-dashboard-edit-name"></label>
+                <label><?php esc_html_e('RUT', 'ov-booking-system'); ?><input type="text" id="ov-dashboard-edit-rut" placeholder="<?php esc_attr_e('No registrado', 'ov-booking-system'); ?>" readonly></label>
                 <label><?php _e('Teléfono', 'ov-booking-system'); ?><input type="text" id="ov-dashboard-edit-phone"></label>
                 <label><?php _e('Email', 'ov-booking-system'); ?><input type="email" id="ov-dashboard-edit-email"></label>
                 <label><?php _e('Estado', 'ov-booking-system'); ?><select id="ov-dashboard-edit-status"><?php foreach ($status_label as $key => $label): ?><option value="<?php echo esc_attr($key); ?>"><?php echo esc_html($label); ?></option><?php endforeach; ?></select></label>
                 <label><?php _e('Fecha', 'ov-booking-system'); ?><input type="date" id="ov-dashboard-edit-date"></label>
                 <label><?php _e('Hora', 'ov-booking-system'); ?><input type="time" id="ov-dashboard-edit-time"></label>
-                <label class="ov-dashboard-edit-full"><?php _e('Notas', 'ov-booking-system'); ?><textarea id="ov-dashboard-edit-notes" rows="3"></textarea></label>
+                <label class="ov-dashboard-edit-full"><?php _e('Notas', 'ov-booking-system'); ?><textarea id="ov-dashboard-edit-notes" rows="2"></textarea></label>
             </div>
         </div>
         <div class="ov-dashboard-modal-footer">
@@ -292,6 +309,47 @@ $export_url = add_query_arg(array('action' => 'ov_booking_export_csv', '_wpnonce
 
 <style>
 .ov-dashboard-reservation-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:14px 0 8px}.ov-dashboard-filter-search{display:flex;align-items:center;gap:6px;min-width:260px;flex:1}.ov-dashboard-filter-search .dashicons{color:#8c8f94}.ov-dashboard-filter-search input,.ov-dashboard-reservation-tools select{min-height:36px;border:1px solid #dcdcde;border-radius:6px;background:#fff}.ov-dashboard-filter-search input{width:100%;padding:0 10px}.ov-dashboard-reservation-tools select{padding:0 30px 0 9px}.ov-dashboard-calendar-summary{font-size:12px;color:#646970;margin:4px 0 10px}.ov-dashboard-calendar-actions{display:flex;gap:8px;flex-wrap:wrap}.ov-dashboard-calendar-actions .is-active{box-shadow:inset 0 0 0 1px currentColor}.ov-dashboard-calendar-panel.is-fullscreen{position:fixed;z-index:100000;inset:32px 0 0 0;margin:0;border-radius:0;overflow:auto;background:#fff}.ov-dashboard-calendar-panel.is-fullscreen #ov-dashboard-calendar{min-height:calc(100vh - 180px)}.ov-dashboard-calendar-panel.is-fullscreen #ov-dashboard-calendar-fullscreen .dashicons:before{content:"\f158"}.ov-dashboard .ov-calendar-add{background:transparent;border:0;border-radius:4px;color:#2271b1;cursor:pointer;float:right;font-size:11px;line-height:24px;margin:0;padding:0 5px}.ov-dashboard .ov-calendar-add:hover,.ov-dashboard .ov-calendar-add:focus{background:#e7f3ff;color:#135e96;outline:1px solid #72aee6}.ov-dashboard .ov-calendar-event{clear:both}.ov-dashboard-reservation-trigger{width:100%;border:0;background:transparent;text-align:left;font:inherit;cursor:pointer}.ov-dashboard-reservation-trigger:hover{background:#f6f7f7}.ov-dashboard-modal{display:none;position:fixed;z-index:100001;inset:0;background:rgba(0,0,0,.48);padding:5vh 20px;overflow:auto}.ov-dashboard-modal.is-open{display:flex;align-items:flex-start;justify-content:center}.ov-dashboard-modal-dialog{width:min(720px,100%);background:#fff;border-radius:14px;box-shadow:0 20px 70px rgba(0,0,0,.28);overflow:hidden}.ov-dashboard-modal-header{display:flex;justify-content:space-between;gap:20px;padding:22px 24px;border-bottom:1px solid #eee}.ov-dashboard-modal-kicker{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8c8f94}.ov-dashboard-modal-header h2{margin:3px 0 0;font-size:22px}.ov-dashboard-modal-close{font-size:28px;text-decoration:none;line-height:1}.ov-dashboard-modal-body{padding:22px 24px}.ov-dashboard-reservation-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}.ov-dashboard-meta-card{background:#f6f7f7;border-radius:8px;padding:10px 12px}.ov-dashboard-meta-card small{display:block;color:#8c8f94;font-size:11px}.ov-dashboard-meta-card strong{display:block;margin-top:3px}.ov-dashboard-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.ov-dashboard-edit-grid label{font-weight:600;font-size:12px}.ov-dashboard-edit-grid input,.ov-dashboard-edit-grid select,.ov-dashboard-edit-grid textarea{display:block;width:100%;box-sizing:border-box;margin-top:5px}.ov-dashboard-edit-full{grid-column:1/-1}.ov-dashboard-modal-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 24px;background:#f8f9fa;border-top:1px solid #eee}.ov-dashboard-modal-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}@media(max-width:782px){.ov-dashboard-reservation-meta,.ov-dashboard-edit-grid{grid-template-columns:1fr}.ov-dashboard-edit-full{grid-column:auto}.ov-dashboard-modal{padding:20px 10px}.ov-dashboard-modal-footer{align-items:stretch;flex-direction:column}.ov-dashboard-modal-actions{justify-content:stretch}.ov-dashboard-modal-actions .button{flex:1}.ov-dashboard-calendar-actions{flex-wrap:wrap}}
+/* Modal compacto: la cabecera y las acciones permanecen visibles en ventanas bajas. */
+.ov-dashboard-modal { box-sizing: border-box; padding: 16px; }
+.ov-dashboard-modal.is-open { align-items: center; }
+.ov-dashboard-modal-dialog {
+    display: flex;
+    flex-direction: column;
+    width: min(920px, 100%);
+    max-height: calc(100vh - 32px);
+}
+.ov-dashboard-modal-header,
+.ov-dashboard-modal-footer { flex: 0 0 auto; }
+.ov-dashboard-modal-header { padding: 14px 20px; }
+.ov-dashboard-modal-body {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 16px 20px;
+}
+.ov-dashboard-reservation-meta { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.ov-dashboard-meta-card { min-width: 0; padding: 8px 10px; }
+.ov-dashboard-meta-card strong { overflow-wrap: anywhere; }
+.ov-dashboard-edit-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 14px; }
+.ov-dashboard-edit-grid label { min-width: 0; }
+.ov-dashboard-edit-full { grid-column: span 2; }
+.ov-dashboard-edit-grid textarea { min-height: 52px; resize: vertical; }
+.ov-dashboard-modal-footer { padding: 12px 20px; }
+@media (max-width: 780px) {
+    .ov-dashboard-edit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ov-dashboard-edit-full { grid-column: 1 / -1; }
+    .ov-dashboard-modal-footer { flex-direction: row; flex-wrap: wrap; align-items: center; }
+}
+@media (max-width: 600px) {
+    .ov-dashboard-modal { padding: 8px; }
+    .ov-dashboard-modal-dialog { max-height: calc(100vh - 16px); }
+    .ov-dashboard-reservation-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ov-dashboard-edit-grid { grid-template-columns: 1fr; }
+    .ov-dashboard-edit-full { grid-column: auto; }
+    .ov-dashboard-modal-header,
+    .ov-dashboard-modal-body,
+    .ov-dashboard-modal-footer { padding-left: 12px; padding-right: 12px; }
+    .ov-dashboard-modal-footer { flex-direction: column; align-items: stretch; }
+}
 </style>
 
 <script>
@@ -320,8 +378,6 @@ jQuery(function($) {
         return dates;
     }
     function esc(value){ return $('<div>').text(value || '').html(); }
-    function formatDate(date){ if(!date) return ''; return new Date(date+'T12:00:00').toLocaleDateString(locale,{day:'2-digit',month:'long',year:'numeric'}); }
-
     function getEvent(id){ return allEvents.find(e => String(e.id) === String(id)); }
 
     function openNewReservation(date){
@@ -401,11 +457,10 @@ jQuery(function($) {
             '<div class="ov-dashboard-meta-card"><small>Servicio</small><strong>'+esc(p.serviceName)+'</strong></div>'+
             '<div class="ov-dashboard-meta-card"><small>Profesional</small><strong>'+esc(p.professionalName)+'</strong></div>'+
             '<div class="ov-dashboard-meta-card"><small>Reserva</small><strong>#'+esc(p.bookingId || p.id)+'</strong></div>'+
-            '<div class="ov-dashboard-meta-card"><small>Fecha</small><strong>'+esc(formatDate(p.date))+'</strong></div>'+
-            '<div class="ov-dashboard-meta-card"><small>Precio</small><strong>'+esc(p.price || '—')+'</strong></div>'+
-            '<div class="ov-dashboard-meta-card"><small>Estado</small><strong>'+esc(p.statusLabel)+'</strong></div>'
+            '<div class="ov-dashboard-meta-card"><small>Precio</small><strong>'+esc(p.price || '—')+'</strong></div>'
         );
         $('#ov-dashboard-edit-name').val(p.customerName || '');
+        $('#ov-dashboard-edit-rut').val(p.customerRut || '');
         $('#ov-dashboard-edit-phone').val(p.customerPhone || '');
         $('#ov-dashboard-edit-email').val(p.customerEmail || '');
         $('#ov-dashboard-edit-status').val(p.status || 'pending');
