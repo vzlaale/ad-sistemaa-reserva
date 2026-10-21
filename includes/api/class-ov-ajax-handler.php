@@ -312,6 +312,8 @@ class OV_Ajax_Handler {
                 ), 400);
             }
 
+            $this->enforce_public_availability_rate_limit();
+
             $availability = new OV_Availability();
 
             // Si es "cualquier profesional", obtener lista una vez para evaluar disponibilidad por día
@@ -423,15 +425,7 @@ class OV_Ajax_Handler {
                 wp_send_json_error(array('message' => __('Mes fuera del período reservable.', 'ov-booking-system')), 400);
             }
 
-            if (!is_user_logged_in()) {
-                $attempts = $this->increment_rate_limit('month_availability_ip', $this->get_request_ip_hash(), 600);
-                if ($attempts === false) {
-                    wp_send_json_error(array('message' => __('No fue posible consultar el calendario. Inténtalo nuevamente.', 'ov-booking-system')), 503);
-                }
-                if ($attempts > 60) {
-                    wp_send_json_error(array('message' => __('Demasiadas consultas al calendario. Espera unos minutos.', 'ov-booking-system')), 429);
-                }
-            }
+            $this->enforce_public_availability_rate_limit();
 
             // El snapshot vive solo durante esta petición; la siguiente ve nuevas reservas.
             $professional_ids = array($professional_id);
@@ -1418,6 +1412,25 @@ class OV_Ajax_Handler {
     private function get_request_ip_hash() {
         $ip = isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) : 'unknown';
         return hash_hmac('sha256', $ip, wp_salt('auth'));
+    }
+
+    /**
+     * Las consultas públicas mensuales y diarias comparten el contador por IP.
+     * Se llama únicamente después de validar el contexto y la fecha.
+     */
+    private function enforce_public_availability_rate_limit() {
+        if (is_user_logged_in()) {
+            return;
+        }
+
+        // Conservar el scope existente para no reiniciar los contadores al actualizar.
+        $attempts = $this->increment_rate_limit('month_availability_ip', $this->get_request_ip_hash(), 600);
+        if ($attempts === false) {
+            wp_send_json_error(array('message' => __('No fue posible consultar la disponibilidad. Inténtalo nuevamente.', 'ov-booking-system')), 503);
+        }
+        if ($attempts > 60) {
+            wp_send_json_error(array('message' => __('Demasiadas consultas de disponibilidad. Espera unos minutos.', 'ov-booking-system')), 429);
+        }
     }
 
     /**

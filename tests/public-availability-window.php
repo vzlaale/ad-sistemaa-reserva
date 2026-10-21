@@ -44,7 +44,13 @@ class Test_DB {
     public $prefix = 'wp_';
     public $attempts = 0;
     public $fail = false;
-    public function prepare($sql) { return $sql; }
+    public $availability_rate_keys = array();
+    public function prepare($sql, ...$args) {
+        if (strpos($sql, 'INSERT INTO') === 0 && strpos($sql, 'ov_booking_rate_limits') !== false) {
+            $this->availability_rate_keys[] = $args[0];
+        }
+        return $sql;
+    }
     public function query($sql) {
         if ($this->fail) { return false; }
         if (strpos($sql, 'INSERT INTO') === 0) {
@@ -216,15 +222,34 @@ $GLOBALS['fixture_form']->enable_professionals = 0;
 $GLOBALS['fixture_form']->allow_any_professional = 1;
 
 $GLOBALS['logged_in'] = false;
+$GLOBALS['wpdb']->availability_rate_keys = array();
 $GLOBALS['wpdb']->attempts = 59;
+$response = call_route('get_month_availability', array_merge($month_params, array('month' => '13')));
+check($response->status === 400 && $GLOBALS['wpdb']->attempts === 59 && OV_Availability::$calls === 0, 'Mes inválido no consume el contador');
+$response = call_route('get_available_slots', array_merge($slot_params, array('form_id' => array('1'))));
+check($response->status === 400 && $GLOBALS['wpdb']->attempts === 59 && OV_Availability::$calls === 0, 'ID diario inválido no consume el contador');
+$response = call_route('get_available_slots', array_merge($slot_params, array('date' => $last_month->modify('+1 month')->format('Y-m-d'))));
+check($response->status === 400 && $GLOBALS['wpdb']->attempts === 59 && OV_Availability::$calls === 0, 'Fecha diaria fuera de rango no consume el contador');
 $response = call_route('get_month_availability', $month_params);
-check($response->success && $GLOBALS['wpdb']->attempts === 60, 'Solicitud anónima número 60 permitida');
+check($response->success && $GLOBALS['wpdb']->attempts === 60, 'Solicitud mensual anónima número 60 permitida');
+$response = call_route('get_available_slots', $slot_params);
+check($response->status === 429 && OV_Availability::$calls === 0 && $GLOBALS['wpdb']->attempts === 61, 'Solicitud diaria anónima número 61 limitada');
+check(count(array_unique($GLOBALS['wpdb']->availability_rate_keys)) === 1, 'Mes y día comparten la misma clave de contador');
+$GLOBALS['wpdb']->attempts = 59;
+$response = call_route('get_available_slots', $slot_params);
+check($response->success && $GLOBALS['wpdb']->attempts === 60 && OV_Availability::$calls === 1, 'Solicitud diaria anónima número 60 permitida');
 $response = call_route('get_month_availability', $month_params);
-check($response->status === 429 && OV_Availability::$calls === 0, 'Solicitud anónima número 61 limitada');
+check($response->status === 429 && OV_Availability::$calls === 0, 'Solicitud mensual anónima número 61 limitada');
 $GLOBALS['wpdb']->fail = true;
+$response = call_route('get_available_slots', $slot_params);
+check($response->status === 503 && OV_Availability::$calls === 0, 'Error del contador bloquea el cálculo diario');
 $response = call_route('get_month_availability', $month_params);
-check($response->status === 503 && OV_Availability::$calls === 0, 'Error del contador bloquea el cálculo');
+check($response->status === 503 && OV_Availability::$calls === 0, 'Error del contador bloquea el cálculo mensual');
 $GLOBALS['wpdb']->fail = false;
+$GLOBALS['logged_in'] = true;
+$prior_attempts = $GLOBALS['wpdb']->attempts;
+$response = call_route('get_available_slots', $slot_params);
+check($response->success && $GLOBALS['wpdb']->attempts === $prior_attempts, 'Usuario autenticado no consume el contador público');
 
 $previous_error_log = ini_get('error_log');
 ini_set('error_log', PHP_OS_FAMILY === 'Windows' ? 'NUL' : '/dev/null');

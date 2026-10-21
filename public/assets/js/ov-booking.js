@@ -1,6 +1,6 @@
 /**
  * OV Booking System - Frontend JavaScript
- * Version: 1.8.4
+ * Version: 1.8.5
  * Author: Oscar Viedma
  */
 
@@ -375,6 +375,7 @@ window.OVBooking.openWhatsApp = function(phone, message) {
             const year = this.currentMonth.getFullYear();
             const month = this.currentMonth.getMonth();
             const windowStart = this.formConfig.booking_window.start_date;
+            const windowEnd = this.formConfig.booking_window.end_date;
             const monthLabel = this.currentMonth.toLocaleDateString(this.locale(), { month: 'long', year: 'numeric' });
 
             $('#ov-current-month', this.container).text(monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1));
@@ -421,27 +422,11 @@ window.OVBooking.openWhatsApp = function(phone, message) {
                     dayElement.addClass('ov-today');
                 }
 
-                // Verificar si es día pasado
-                if (dateStr < windowStart) {
+                // La respuesta mensual decide la disponibilidad; aquí solo se acota la ventana.
+                if (dateStr < windowStart || dateStr > windowEnd) {
                     dayElement.addClass('ov-disabled');
-                } 
-                // Para anticipación, no bloqueamos el día completo
-                // El backend filtrará los slots individuales que no cumplan
-                else {
+                } else {
                     dayElement.addClass('ov-eligible ov-pending');
-                }
-
-                // Verificar si es festivo
-                if (this.formConfig && this.formConfig.holidays && this.formConfig.holidays.includes(dateStr)) {
-                    dayElement.removeClass('ov-eligible ov-pending').addClass('ov-disabled');
-                }
-
-                // Verificar si es día laborable
-                if (this.formConfig && this.formConfig.working_days) {
-                    const dayOfWeek = currentDate.getDay();
-                    if (!this.formConfig.working_days.includes(dayOfWeek)) {
-                        dayElement.removeClass('ov-eligible ov-pending').addClass('ov-disabled');
-                    }
                 }
 
                 grid.append(dayElement);
@@ -550,14 +535,16 @@ window.OVBooking.openWhatsApp = function(phone, message) {
                 type: 'GET',
                 data: ajaxData,
                 success: (response) => {
-                    if (response.success) {
+                    if (response && response.success) {
                         this.renderTimeSlots(response.data);
                     } else {
-                        grid.empty().append($('<p>').text(response.data.message));
+                        const message = response && response.data && response.data.message;
+                        grid.empty().append($('<p>').text(message || ovBooking.strings.error));
                     }
                 },
-                error: () => {
-                    grid.html('<p>' + ovBooking.strings.error + '</p>');
+                error: (xhr) => {
+                    const message = xhr && xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message;
+                    grid.empty().append($('<p>').text(message || ovBooking.strings.error));
                 }
             });
         }
