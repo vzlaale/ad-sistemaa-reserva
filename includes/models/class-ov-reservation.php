@@ -315,8 +315,11 @@ class OV_Reservation {
 
     /**
      * Actualizar reserva
+     *
+     * @param bool $emit_updated_event Desactivar solo para una ampliación administrativa
+     *                                 que no debe generar avisos automáticos.
      */
-    public function update($id, $data) {
+    public function update($id, $data, $emit_updated_event = true) {
         $previous = $this->get($id);
         if (!$previous) {
             return false;
@@ -360,7 +363,7 @@ class OV_Reservation {
 
         $result = $this->db->update('reservations', $update_data, array('id' => $id));
 
-        if ($result !== false && !empty($update_data)) {
+        if ($emit_updated_event && $result !== false && !empty($update_data)) {
             do_action('ov_booking_reservation_updated', (int) $id, $update_data, $previous);
         }
 

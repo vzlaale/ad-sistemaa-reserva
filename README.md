@@ -1,4 +1,4 @@
-# OV Booking System 1.8.6
+# OV Booking System 1.8.7
 
 Plugin de reservas para WordPress, compatible con Divi y otros temas.
 
@@ -25,6 +25,7 @@ La versión 1.8.5 comparte el límite anónimo entre consultas mensuales y diari
 habilita únicamente las fechas que devuelve el servidor, incluidos horarios especiales.
 La versión 1.8.6 calcula los días laborables de los profesionales en una consulta de lote,
 conservando el campo `working_days` de la configuración pública.
+La versión 1.8.7 permite ampliar una reserva activa desde el editor sin crear otra cita.
 El esquema de base de datos permanece en 1.8.0.
 
 ## Requisitos asumidos
@@ -54,6 +55,15 @@ un archivo iCalendar compatible con Apple Calendar y Outlook.
 Este flujo no accede a la cuenta del cliente ni inserta eventos silenciosamente. Una
 sincronización automática requeriría OAuth y consentimiento explícito del titular.
 
+## Ampliar una reserva
+
+En el editor de la reserva, aumenta **Duración total (minutos)** en tramos de 30.
+Por ejemplo, para añadir una hora a un chequeo de 30 minutos, introduce **90**.
+El panel muestra la hora hasta la que quedará ocupado el horario, incluido el tiempo
+de separación del servicio. La ampliación se rechaza si coincide con otra cita,
+un descanso o el cierre del profesional. Guarda por separado cualquier cambio de
+fecha, hora, estado o datos de contacto. La ampliación no envía un WhatsApp automático.
+
 ## Actualización segura
 
 - Haz copia de la base de datos y de la carpeta del plugin.
@@ -71,3 +81,5 @@ Los add-ons se instalan como plugins separados y se registran mediante
 `ov_booking_before_reservation_create`; después se mantienen los eventos
 `ov_booking_reservation_created`, `ov_booking_reservation_updated` y
 `ov_booking_reservation_deleted`.
+La ampliación administrativa omite `ov_booking_reservation_updated` para evitar que
+un add-on envíe un aviso automático por el cambio de duración.

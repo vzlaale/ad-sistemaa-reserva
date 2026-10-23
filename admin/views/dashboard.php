@@ -168,6 +168,9 @@ foreach ($reservations as $reservation) {
             'price' => $price,
             'date' => $reservation->booking_date,
             'time' => substr($reservation->booking_time, 0, 5),
+            'durationMinutes' => $service_model->get_duration_in_minutes($reservation),
+            'durationUnit' => $reservation->duration_unit,
+            'bufferMinutes' => $service ? max(0, (int) ($service->buffer_time ?? 0)) : 0,
             'phoneForWhatsapp' => $whatsapp_phone,
             'confirmationMessage' => $whatsapp_message,
             'reminderMessage' => $reminder_message,
@@ -292,6 +295,7 @@ $export_url = add_query_arg(array('action' => 'ov_booking_export_csv', '_wpnonce
                 <label><?php _e('Estado', 'ov-booking-system'); ?><select id="ov-dashboard-edit-status"><?php foreach ($status_label as $key => $label): ?><option value="<?php echo esc_attr($key); ?>"><?php echo esc_html($label); ?></option><?php endforeach; ?></select></label>
                 <label><?php _e('Fecha', 'ov-booking-system'); ?><input type="date" id="ov-dashboard-edit-date"></label>
                 <label><?php _e('Hora', 'ov-booking-system'); ?><input type="time" id="ov-dashboard-edit-time"></label>
+                <label id="ov-dashboard-duration-field"><?php esc_html_e('Duración total (minutos)', 'ov-booking-system'); ?><input type="number" id="ov-dashboard-edit-duration" step="30" max="1440"><small id="ov-dashboard-end-preview" class="ov-duration-preview"></small></label>
                 <label class="ov-dashboard-edit-full"><?php _e('Notas', 'ov-booking-system'); ?><textarea id="ov-dashboard-edit-notes" rows="2"></textarea></label>
             </div>
         </div>
@@ -331,8 +335,9 @@ $export_url = add_query_arg(array('action' => 'ov_booking_export_csv', '_wpnonce
 .ov-dashboard-meta-card strong { overflow-wrap: anywhere; }
 .ov-dashboard-edit-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 14px; }
 .ov-dashboard-edit-grid label { min-width: 0; }
-.ov-dashboard-edit-full { grid-column: span 2; }
+.ov-dashboard-edit-full { grid-column: auto; }
 .ov-dashboard-edit-grid textarea { min-height: 52px; resize: vertical; }
+.ov-duration-preview { display: block; margin-top: 4px; color: #646970; font-weight: normal; }
 .ov-dashboard-modal-footer { padding: 12px 20px; }
 @media (max-width: 780px) {
     .ov-dashboard-edit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -466,11 +471,26 @@ jQuery(function($) {
         $('#ov-dashboard-edit-status').val(p.status || 'pending');
         $('#ov-dashboard-edit-date').val(p.date || '');
         $('#ov-dashboard-edit-time').val(p.time || '');
+        const canExtend = p.durationUnit !== 'days' && Number(p.durationMinutes) > 0 && Number(p.durationMinutes) < 1440 && (p.status === 'pending' || p.status === 'confirmed');
+        $('#ov-dashboard-duration-field').toggle(canExtend);
+        $('#ov-dashboard-edit-duration').prop('disabled', !canExtend).attr('min', p.durationMinutes).val(p.durationMinutes);
         $('#ov-dashboard-edit-notes').val(p.notes || '');
+        updateDurationPreview();
         $('#ov-dashboard-whatsapp-confirmation').toggle(!!p.phoneForWhatsapp);
         $('#ov-dashboard-whatsapp-reminder').toggle(!!p.phoneForWhatsapp);
         $('#ov-dashboard-reservation-modal').addClass('is-open').attr('aria-hidden','false');
     }
+
+    function updateDurationPreview(){
+        const p = activeEvent ? (activeEvent.extendedProps || {}) : {};
+        const time = $('#ov-dashboard-edit-time').val();
+        const duration = Number($('#ov-dashboard-edit-duration').val());
+        const parts = /^([0-2][0-9]):([0-5][0-9])$/.exec(time || '');
+        const end = parts ? Number(parts[1]) * 60 + Number(parts[2]) + duration + Number(p.bufferMinutes || 0) : 0;
+        const valid = parts && Number.isInteger(duration) && duration > 0 && end < 1440;
+        $('#ov-dashboard-end-preview').text(valid ? '<?php echo esc_js(__('Horario reservado hasta', 'ov-booking-system')); ?>: ' + String(Math.floor(end / 60)).padStart(2, '0') + ':' + String(end % 60).padStart(2, '0') : '');
+    }
+    $('#ov-dashboard-edit-duration,#ov-dashboard-edit-time').on('input change', updateDurationPreview);
 
     function closeModal(){ $('#ov-dashboard-reservation-modal').removeClass('is-open').attr('aria-hidden','true'); activeEvent=null; }
 
@@ -532,8 +552,12 @@ jQuery(function($) {
     $(document).on('keydown',function(e){if(e.key==='Escape')closeModal();});
 
     $('#ov-dashboard-save-reservation').on('click',function(){
+        const durationInput = document.getElementById('ov-dashboard-edit-duration');
+        if (!durationInput.disabled && !durationInput.reportValidity()) return;
         const $btn=$(this).prop('disabled',true).text('<?php echo esc_js(__('Guardando...', 'ov-booking-system')); ?>');
-        $.post(ajaxurl,{action:'ov_update_reservation',nonce:ovBookingAdmin.nonce,reservation_id:$('#ov-dashboard-edit-id').val(),customer_name:$('#ov-dashboard-edit-name').val(),customer_email:$('#ov-dashboard-edit-email').val(),customer_phone:$('#ov-dashboard-edit-phone').val(),booking_date:$('#ov-dashboard-edit-date').val(),booking_time:$('#ov-dashboard-edit-time').val(),status:$('#ov-dashboard-edit-status').val(),notes:$('#ov-dashboard-edit-notes').val()}).done(function(r){if(r.success){location.reload();}else{alert((r.data&&r.data.message)||ovBookingAdmin.strings.error_save);}}).fail(function(){alert(ovBookingAdmin.strings.error_save);}).always(function(){$btn.prop('disabled',false).text('<?php echo esc_js(__('Guardar cambios', 'ov-booking-system')); ?>');});
+        const request = {action:'ov_update_reservation',nonce:ovBookingAdmin.nonce,reservation_id:$('#ov-dashboard-edit-id').val(),customer_name:$('#ov-dashboard-edit-name').val(),customer_email:$('#ov-dashboard-edit-email').val(),customer_phone:$('#ov-dashboard-edit-phone').val(),booking_date:$('#ov-dashboard-edit-date').val(),booking_time:$('#ov-dashboard-edit-time').val(),status:$('#ov-dashboard-edit-status').val(),notes:$('#ov-dashboard-edit-notes').val()};
+        if (!$('#ov-dashboard-edit-duration').prop('disabled')) request.duration_minutes = $('#ov-dashboard-edit-duration').val();
+        $.post(ajaxurl,request).done(function(r){if(r.success){location.reload();}else{alert((r.data&&r.data.message)||ovBookingAdmin.strings.error_save);}}).fail(function(xhr){alert((xhr.responseJSON&&xhr.responseJSON.data&&xhr.responseJSON.data.message)||ovBookingAdmin.strings.error_save);}).always(function(){$btn.prop('disabled',false).text('<?php echo esc_js(__('Guardar cambios', 'ov-booking-system')); ?>');});
     });
 
     $('#ov-dashboard-delete-reservation').on('click',function(){

@@ -182,6 +182,9 @@ if ($view === 'calendar') {
             'customerPhone' => $reservation->customer_phone,
             'serviceName' => $service ? $service->name : '',
             'professionalName' => $professional ? $professional->name : __('Cualquiera', 'ov-booking-system'),
+            'durationMinutes' => $service_model->get_duration_in_minutes($reservation),
+            'durationUnit' => $reservation->duration_unit,
+            'bufferMinutes' => $service ? max(0, (int) ($service->buffer_time ?? 0)) : 0,
             'status' => $reservation->status,
             'notes' => $reservation->notes,
             'whatsappPhone' => $whatsapp_phone,
@@ -502,6 +505,9 @@ if ($view === 'calendar') {
                                 data-phone="<?php echo esc_attr($reservation->customer_phone); ?>"
                                 data-date="<?php echo esc_attr($reservation->booking_date); ?>"
                                 data-time="<?php echo esc_attr(substr($reservation->booking_time, 0, 5)); ?>"
+                                data-duration-minutes="<?php echo esc_attr($service_model->get_duration_in_minutes($reservation)); ?>"
+                                data-duration-unit="<?php echo esc_attr($reservation->duration_unit); ?>"
+                                data-buffer-minutes="<?php echo esc_attr($service ? max(0, (int) ($service->buffer_time ?? 0)) : 0); ?>"
                                 data-status="<?php echo esc_attr($reservation->status); ?>"
                                 data-notes="<?php echo esc_attr($reservation->notes); ?>"
                             >
@@ -694,10 +700,11 @@ if ($view === 'calendar') {
                 <p><label><?php esc_html_e('RUT', 'ov-booking-system'); ?><br><input type="text" id="ov-edit-customer-rut" class="regular-text" style="width:100%;" placeholder="<?php esc_attr_e('No registrado', 'ov-booking-system'); ?>" readonly></label></p>
                 <p><label><?php _e('Email', 'ov-booking-system'); ?><br><input type="email" id="ov-edit-customer-email" class="regular-text" style="width:100%;"></label></p>
                 <p><label><?php _e('Teléfono', 'ov-booking-system'); ?><br><input type="text" id="ov-edit-customer-phone" class="regular-text" style="width:100%;"></label></p>
-                <div style="display:flex; gap:12px;">
+                <div style="display:flex; gap:12px; flex-wrap:wrap;">
                     <p style="flex:1;"><label><?php _e('Fecha', 'ov-booking-system'); ?><br><input type="date" id="ov-edit-booking-date" style="width:100%;"></label></p>
                     <p style="flex:1;"><label><?php _e('Hora', 'ov-booking-system'); ?><br><input type="time" id="ov-edit-booking-time" style="width:100%;"></label></p>
                 </div>
+                <p id="ov-edit-duration-field"><label><?php esc_html_e('Duración total (minutos)', 'ov-booking-system'); ?><br><input type="number" id="ov-edit-duration" step="30" max="1440" style="width:100%;"></label><br><small id="ov-edit-end-preview" style="color:#646970;"></small></p>
                 <p><label><?php _e('Estado', 'ov-booking-system'); ?><br>
                     <select id="ov-edit-status" style="width:100%;">
                         <option value="pending"><?php _e('Pendiente', 'ov-booking-system'); ?></option>
@@ -726,6 +733,16 @@ if ($view === 'calendar') {
 <script>
     jQuery(function($){
 
+        function updateDurationPreview(){
+            const time = $('#ov-edit-booking-time').val();
+            const duration = Number($('#ov-edit-duration').val());
+            const parts = /^([0-2][0-9]):([0-5][0-9])$/.exec(time || '');
+            const end = parts ? Number(parts[1]) * 60 + Number(parts[2]) + duration + Number($('#ov-edit-reservation-modal').data('bufferMinutes') || 0) : 0;
+            const valid = parts && Number.isInteger(duration) && duration > 0 && end < 1440;
+            $('#ov-edit-end-preview').text(valid ? '<?php echo esc_js(__('Horario reservado hasta', 'ov-booking-system')); ?>: ' + String(Math.floor(end / 60)).padStart(2, '0') + ':' + String(end % 60).padStart(2, '0') : '');
+        }
+        $('#ov-edit-duration,#ov-edit-booking-time').on('input change', updateDurationPreview);
+
         window.ovBookingOpenReservationEditor = function(element) {
             const data = element.dataset ? element.dataset : $(element).data();
             const $modal = $('#ov-edit-reservation-modal');
@@ -736,13 +753,18 @@ if ($view === 'calendar') {
             $('#ov-edit-customer-phone').val(data.phone);
             $('#ov-edit-booking-date').val(data.date);
             $('#ov-edit-booking-time').val(data.time);
+            const canExtend = data.durationUnit !== 'days' && Number(data.durationMinutes) > 0 && Number(data.durationMinutes) < 1440 && (data.status === 'pending' || data.status === 'confirmed');
+            $('#ov-edit-duration-field').toggle(canExtend);
+            $('#ov-edit-duration').prop('disabled', !canExtend).attr('min', data.durationMinutes).val(data.durationMinutes);
             $('#ov-edit-status').val(data.status);
             $('#ov-edit-notes').val(data.notes);
             $modal.data({
                 whatsappPhone: data.whatsappPhone || '',
                 whatsappMessage: data.whatsappMessage || '',
-                reminderMessage: data.reminderMessage || ''
+                reminderMessage: data.reminderMessage || '',
+                bufferMinutes: data.bufferMinutes || 0
             });
+            updateDurationPreview();
             $('#ov-edit-whatsapp').prop('hidden', !(data.whatsappPhone && data.whatsappMessage));
             $('#ov-edit-reminder').prop('hidden', !(data.whatsappPhone && data.reminderMessage));
             $modal.fadeIn(120);
@@ -754,8 +776,10 @@ if ($view === 'calendar') {
             if (e.target.id === 'ov-edit-reservation-modal' || e.target.id === 'ov-edit-cancel') $('#ov-edit-reservation-modal').fadeOut(120);
         });
         $('#ov-edit-save').on('click', function(){
+            const durationInput = document.getElementById('ov-edit-duration');
+            if (!durationInput.disabled && !durationInput.reportValidity()) return;
             const $btn = $(this).prop('disabled', true).text('Guardando...');
-            $.post(ajaxurl, {
+            const request = {
                 action: 'ov_update_reservation',
                 nonce: ovBookingAdmin.nonce,
                 reservation_id: $('#ov-edit-reservation-id').val(),
@@ -766,7 +790,9 @@ if ($view === 'calendar') {
                 booking_time: $('#ov-edit-booking-time').val(),
                 status: $('#ov-edit-status').val(),
                 notes: $('#ov-edit-notes').val()
-            }).done(function(r){
+            };
+            if (!$('#ov-edit-duration').prop('disabled')) request.duration_minutes = $('#ov-edit-duration').val();
+            $.post(ajaxurl, request).done(function(r){
                 if (r.success) location.reload();
                 else alert((r.data && r.data.message) || ovBookingAdmin.strings.error_save);
             }).fail(function(xhr){
@@ -896,6 +922,9 @@ if ($view === 'calendar') {
                     phone: event.extendedProps.customerPhone,
                     date: event.start.slice(0, 10),
                     time: event.allDay ? '' : event.start.slice(11, 16),
+                    durationMinutes: event.extendedProps.durationMinutes,
+                    durationUnit: event.extendedProps.durationUnit,
+                    bufferMinutes: event.extendedProps.bufferMinutes,
                     status: event.extendedProps.status,
                     notes: event.extendedProps.notes,
                     whatsappPhone: event.extendedProps.whatsappPhone,

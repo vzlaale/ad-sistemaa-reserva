@@ -773,4 +773,91 @@ class OV_Availability {
         
         return false;
     }
+
+    /** Validar el intervalo completo de una reserva editada, incluido su buffer. */
+    public function validate_reservation_interval($reservation, $date, $start_time, $end_time) {
+        $this->form = (new OV_Form())->get((int) $reservation->form_id);
+        $this->professional_id = !empty($reservation->professional_id) ? (int) $reservation->professional_id : null;
+        $this->date = $date;
+        if (!$this->form || !preg_match('/^\d{2}:\d{2}$/', $start_time) || !preg_match('/^\d{2}:\d{2}$/', $end_time)) {
+            return new WP_Error('invalid_interval', __('El horario de la reserva no es válido.', 'ov-booking-system'));
+        }
+        $start = $this->time_to_minutes($start_time);
+        $end = $this->time_to_minutes($end_time);
+        if ($start < 0 || $end <= $start || $end > 1440 || $this->is_holiday($date)) {
+            return new WP_Error('outside_schedule', __('La duración supera el horario disponible.', 'ov-booking-system'));
+        }
+
+        $inside_schedule = false;
+        $schedule = $this->get_day_schedule($date);
+        if (!is_array($schedule)) {
+            return new WP_Error('schedule_unavailable', __('No se pudo comprobar el horario.', 'ov-booking-system'));
+        }
+        foreach ($schedule as $range) {
+            if (!empty($range->closed_all_day)) {
+                return new WP_Error('outside_schedule', __('El día está cerrado.', 'ov-booking-system'));
+            }
+            if ($start >= $this->time_to_minutes($range->start_time) && $end <= $this->time_to_minutes($range->end_time)) {
+                $inside_schedule = true;
+            }
+        }
+        if (!$inside_schedule) {
+            return new WP_Error('outside_schedule', __('La duración supera el horario disponible.', 'ov-booking-system'));
+        }
+
+        $day = $this->datetime_helper->get_day_of_week($date);
+        $breaks = $this->schedule_model->get_breaks((int) $reservation->form_id, $this->professional_id, $date, $day);
+        if (!is_array($breaks)) {
+            return new WP_Error('breaks_unavailable', __('No se pudieron comprobar los descansos.', 'ov-booking-system'));
+        }
+        foreach ($breaks as $break) {
+            if ($start < $this->time_to_minutes($break->end_time) && $end > $this->time_to_minutes($break->start_time)) {
+                return new WP_Error('break_conflict', __('La ampliación coincide con un descanso.', 'ov-booking-system'));
+            }
+        }
+
+        $capacity = max(1, (int) $this->form->max_bookings_per_slot);
+        $per_professional = !empty($this->form->enable_professionals)
+            && ($this->form->max_bookings_per_slot_type ?? '') === 'per_professional'
+            && $this->professional_id !== null;
+        $events = array();
+        $reservations = $this->reservation_model->get_by_date((int) $reservation->form_id, $date);
+        if (!is_array($reservations)) {
+            return new WP_Error('reservations_unavailable', __('No se pudo comprobar la disponibilidad.', 'ov-booking-system'));
+        }
+        foreach ($reservations as $other) {
+            if ((int) $other->id === (int) $reservation->id) {
+                continue;
+            }
+            if (!preg_match('/^\d{2}:\d{2}/', (string) $other->booking_time)
+                || !preg_match('/^\d{2}:\d{2}/', (string) $other->end_time)) {
+                return new WP_Error('invalid_existing_interval', __('Hay una reserva cuyo horario no se pudo comprobar.', 'ov-booking-system'));
+            }
+            $other_start = $this->time_to_minutes($other->booking_time);
+            $other_end = $this->time_to_minutes($other->end_time);
+            if ($other_start >= $end || $other_end <= $start) {
+                continue;
+            }
+            if ($this->professional_id !== null && (int) $other->professional_id === $this->professional_id) {
+                return new WP_Error('professional_conflict', __('El profesional ya tiene otra reserva en ese horario.', 'ov-booking-system'));
+            }
+            if (!$per_professional) {
+                $events[] = array(max($start, $other_start), 1);
+                $events[] = array(min($end, $other_end), -1);
+            }
+        }
+        if (!$per_professional) {
+            usort($events, static function($a, $b) {
+                return $a[0] === $b[0] ? $a[1] <=> $b[1] : $a[0] <=> $b[0];
+            });
+            $occupied = 0;
+            foreach ($events as $event) {
+                $occupied += $event[1];
+                if ($occupied >= $capacity) {
+                    return new WP_Error('capacity_conflict', __('No hay cupo durante todo el intervalo solicitado.', 'ov-booking-system'));
+                }
+            }
+        }
+        return true;
+    }
 }
