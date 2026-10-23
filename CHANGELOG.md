@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.8.7 - Ampliación de reservas
+
+- Administradores y OV-Manager pueden ampliar en tramos de 30 minutos una reserva activa sin crear otra reserva ni enviar un WhatsApp automático.
+- La ampliación y los movimientos posteriores comprueban el intervalo completo, los descansos, el horario y los cupos bajo el bloqueo de reservas.
+- El enlace de calendario del paciente refleja la duración guardada en la reserva. Sin cambios de esquema; WordPress 5.8 y PHP 7.4 siguen siendo los mínimos.
+
 ## 1.8.6 - En pruebas, pendiente de publicación
 
 - La configuración pública conserva `working_days` pero calcula la unión de horarios generales y de profesionales activos con una consulta de lote, sin consultas por profesional.

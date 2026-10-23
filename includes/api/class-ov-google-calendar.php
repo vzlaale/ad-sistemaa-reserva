@@ -56,7 +56,9 @@ class OV_Google_Calendar {
             } else {
                 $start = new DateTime($reservation->booking_date . ' ' . $reservation->booking_time, $timezone);
                 $end = clone $start;
-                $duration_minutes = max(1, (new OV_Service())->get_duration_in_minutes($service));
+                // El servicio define la duración inicial; la reserva puede haberse ampliado.
+                $duration_source = !empty($reservation->duration) ? $reservation : $service;
+                $duration_minutes = max(1, (new OV_Service())->get_duration_in_minutes($duration_source));
                 $end->modify('+' . $duration_minutes . ' minutes');
 
                 $google_start = clone $start;

@@ -1017,11 +1017,18 @@ class OV_Ajax_Handler {
             'notes'          => isset($_POST['notes']) ? sanitize_textarea_field(wp_unslash($_POST['notes'])) : '',
         );
 
+        if (isset($_POST['duration_minutes'])) {
+            $raw_duration = is_scalar($_POST['duration_minutes']) ? (string) wp_unslash($_POST['duration_minutes']) : '';
+            if (!preg_match('/^[0-9]{1,4}$/', $raw_duration) || (int) $raw_duration < 1 || (int) $raw_duration > 1440) {
+                wp_send_json_error(array('message' => __('Duración no válida.', 'ov-booking-system')), 400);
+            }
+            $data['requested_duration_minutes'] = (int) $raw_duration;
+        }
+
         if (!in_array($data['status'], OV_Reservation::ALLOWED_STATUSES, true)) {
             wp_send_json_error(array('message' => __('Estado inválido', 'ov-booking-system')), 400);
         }
 
-        // Recalcular end_time con la duración existente de la reserva.
         $reservation_model = new OV_Reservation();
         $reservation = $reservation_model->get($reservation_id);
         if (!$reservation) {
@@ -1045,21 +1052,6 @@ class OV_Ajax_Handler {
             wp_send_json_error(array('message' => implode(' ', $validation_errors)), 400);
         }
         $data['customer_phone'] = OV_Validation::normalize_phone($data['customer_phone']);
-
-        $datetime_helper = new OV_DateTime();
-        $duration_minutes = intval($reservation->duration);
-        if (($reservation->duration_unit ?? 'minutes') === 'hours') {
-            $duration_minutes *= 60;
-        } elseif (($reservation->duration_unit ?? 'minutes') === 'days') {
-            $duration_minutes *= 1440;
-        }
-        $service = (new OV_Service())->get((int) $reservation->service_id);
-        $buffer_minutes = $service ? (int) ($service->buffer_time ?? 0) : 0;
-        if (($reservation->duration_unit ?? 'minutes') === 'days') {
-            $data['end_time'] = '23:59:59';
-        } elseif ($duration_minutes > 0) {
-            $data['end_time'] = $datetime_helper->add_minutes($data['booking_time'], $duration_minutes + $buffer_minutes);
-        }
 
         $updated = $this->guarded_admin_reservation_update($reservation_id, $data);
         if (is_wp_error($updated)) {
@@ -1093,7 +1085,35 @@ class OV_Ajax_Handler {
             $time = substr($data['booking_time'] ?? $reservation->booking_time, 0, 5);
             $moves = $date !== $reservation->booking_date ||
                 $time !== substr($reservation->booking_time, 0, 5);
-            if ($status !== 'cancelled' && ($reservation->status === 'cancelled' || $moves)) {
+            $service_model = new OV_Service();
+            $original_minutes = $service_model->get_duration_in_minutes($reservation);
+            $requested_minutes = $data['requested_duration_minutes'] ?? $original_minutes;
+            unset($data['requested_duration_minutes']);
+            $extends = $requested_minutes !== $original_minutes;
+            if ($extends && (
+                !in_array($reservation->status, array('pending', 'confirmed'), true)
+                || !in_array($status, array('pending', 'confirmed'), true)
+                || ($reservation->duration_unit ?? '') === 'days'
+                || $requested_minutes <= $original_minutes
+                || $requested_minutes > 1440
+                || ($requested_minutes - $original_minutes) % 30 !== 0
+            )) {
+                return new WP_Error('invalid_extension', __('Solo puedes ampliar una reserva activa en tramos de 30 minutos.', 'ov-booking-system'));
+            }
+            if ($extends && (
+                $moves || $status !== $reservation->status
+                || (isset($data['customer_name']) && $data['customer_name'] !== $reservation->customer_name)
+                || (isset($data['customer_email']) && $data['customer_email'] !== $reservation->customer_email)
+                || (isset($data['customer_phone']) && $data['customer_phone'] !== $reservation->customer_phone)
+            )) {
+                return new WP_Error('extension_separate_edit', __('Guarda los otros cambios primero y luego amplía la duración.', 'ov-booking-system'));
+            }
+            if ($extends) {
+                $data['duration'] = $requested_minutes;
+                $data['duration_unit'] = 'minutes';
+            }
+            $occupies_new_interval = $status !== 'cancelled' && ($extends || $moves || $reservation->status === 'cancelled');
+            if ($occupies_new_interval && ($moves || $reservation->status === 'cancelled')) {
                 $availability = new OV_Availability();
                 if (!$availability->is_slot_available(
                     (int) $reservation->form_id,
@@ -1106,7 +1126,23 @@ class OV_Ajax_Handler {
                     return new WP_Error('slot_unavailable', __('El horario ya no está disponible; la reserva no se modificó.', 'ov-booking-system'));
                 }
             }
-            return $model->update($reservation_id, $data);
+            if ($occupies_new_interval) {
+                $service = $service_model->get((int) $reservation->service_id);
+                if (!$service || $requested_minutes <= 0) {
+                    return new WP_Error('missing_service', __('No se pudo validar la duración del servicio.', 'ov-booking-system'));
+                }
+                if (($reservation->duration_unit ?? '') === 'days') {
+                    $data['end_time'] = '23:59:59';
+                } else {
+                    $data['end_time'] = (new OV_DateTime())->add_minutes($time, $requested_minutes + max(0, (int) ($service->buffer_time ?? 0)));
+                    $interval_check = (new OV_Availability())->validate_reservation_interval($reservation, $date, $time, $data['end_time']);
+                    if (is_wp_error($interval_check)) {
+                        return $interval_check;
+                    }
+                }
+            }
+            // Una ampliación no dispara el hook que usa el add-on de mensajes.
+            return $model->update($reservation_id, $data, !$extends);
         } finally {
             $this->release_booking_lock($lock_name);
         }
