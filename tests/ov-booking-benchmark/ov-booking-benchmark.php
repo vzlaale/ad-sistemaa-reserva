@@ -2,7 +2,7 @@
 /**
  * Plugin Name: OV Booking Audit Probe (Clone Only)
  * Description: Medición temporal de disponibilidad de OV Booking en el clon agenda.geneal.cl.
- * Version: 0.1.0
+ * Version: 0.2.0
  * Requires at least: 5.8
  * Requires PHP: 7.4
  */
@@ -33,9 +33,11 @@ add_action('admin_enqueue_scripts', function ($hook) {
     wp_add_inline_script('jquery', file_get_contents(__DIR__ . '/probe.js'), 'after');
 });
 add_action('wp_ajax_ov_get_month_availability', 'ov_bench_tap', 0);
+add_action('wp_ajax_ov_get_available_slots', 'ov_bench_tap', 0);
 add_action('wp_ajax_ov_get_form_config', 'ov_bench_tap', 0);
 add_action('wp_ajax_ov_bench_take', 'ov_bench_take');
 add_action('wp_ajax_ov_bench_context', 'ov_bench_context');
+require_once __DIR__ . '/fixture.php';
 
 function ov_bench_authorized() {
     $nonce = isset($_REQUEST['benchmark_nonce']) && is_string($_REQUEST['benchmark_nonce'])
@@ -94,11 +96,14 @@ function ov_bench_tap() {
         }
         $result = array(
             'plugin_version' => defined('OV_BOOKING_VERSION') ? OV_BOOKING_VERSION : null,
+            'wordpress_version' => get_bloginfo('version'),
             'php_version' => PHP_VERSION,
+            'schema_version' => get_option('ov_booking_db_version'),
             'action' => $action,
             'elapsed_ms' => $elapsed_ms,
             'sql_queries' => $query_count,
             'sql_time_ms' => round($sql_time_ms, 3),
+            'date_add_seen' => $overlap_sql !== null,
             'date_add_explain' => $explain,
             'explain_error' => $explain_error,
         );
@@ -173,20 +178,31 @@ function ov_bench_page() {
     ?>
     <div class="wrap">
         <h1>OV Booking Audit Probe</h1>
-        <p>Solo clon. Una solicitud por muestra; no crea ni modifica reservas. Deja la pestaña abierta durante cada serie.</p>
+        <p>Solo clon. La medición no modifica reservas. La creación de datos sintéticos requiere un respaldo del clon y se elimina con el botón de limpieza.</p>
         <p>OV Booking: <strong><?php echo esc_html(defined('OV_BOOKING_VERSION') ? OV_BOOKING_VERSION : 'no activo'); ?></strong>
         · PHP: <strong><?php echo esc_html(PHP_VERSION); ?></strong>
         · SAVEQUERIES: <strong><?php echo (defined('SAVEQUERIES') && SAVEQUERIES) ? 'sí' : 'no'; ?></strong></p>
         <p><label>Formulario ID <input id="ov-bench-form" type="number" min="1" required></label>
         <label>Servicio ID <input id="ov-bench-service" type="number" min="1" required></label>
         <label>Mes <input id="ov-bench-month" type="month" required value="<?php echo esc_attr(wp_date('Y-m')); ?>"></label>
-        <label>Profesional ID (vacío sin profesional, 0 cualquiera) <input id="ov-bench-professional" type="number" min="0"></label></p>
-        <p><label>Ruta <select id="ov-bench-route"><option value="month">Disponibilidad mensual</option><option value="config">Configuración del formulario</option></select></label>
+        <label>Profesional ID (vacío sin profesional, 0 cualquiera) <input id="ov-bench-professional" type="number" min="0"></label>
+        <label>Fecha diaria <input id="ov-bench-date" type="date"></label></p>
+        <p><label>Ruta <select id="ov-bench-route"><option value="month">Disponibilidad mensual</option><option value="day">Horarios diarios</option><option value="config">Configuración del formulario</option></select></label>
         <label>Muestras <input id="ov-bench-runs" type="number" min="1" max="20" value="20"></label>
         <button type="button" class="button button-primary" id="ov-bench-run">Medir</button></p>
         <p id="ov-bench-status" aria-live="polite"></p>
         <p><button type="button" class="button" id="ov-bench-download" disabled>Descargar JSON</button></p>
         <textarea id="ov-bench-output" readonly rows="22" style="width:100%;font-family:monospace"></textarea>
+        <h2>Fixture sintético P2</h2>
+        <p>Dos formularios exclusivos: uno sin profesionales y otro con dos profesionales públicos y opción «cualquiera». Servicio de tres días, reservas que cruzan el mes y 12 000 reservas históricas sintéticas en lotes. No usa hooks de creación ni datos de pacientes.</p>
+        <p><label><input id="ov-bench-backup" type="checkbox"> Confirmo que existe un respaldo del clon anterior a esta prueba.</label></p>
+        <p><button type="button" class="button" id="ov-bench-fixture-create">Crear fixture</button>
+        <button type="button" class="button" id="ov-bench-fixture-seed">Cargar historial</button>
+        <button type="button" class="button" id="ov-bench-fixture-cleanup">Eliminar fixture</button></p>
+        <p><label>Caso <select id="ov-bench-fixture-case"><option value="solo">Sin profesional</option><option value="pro1">Profesional 1</option><option value="pro2">Profesional 2</option><option value="any">Cualquier profesional</option></select></label>
+        <button type="button" class="button" id="ov-bench-fixture-use">Cargar IDs del caso</button></p>
+        <p id="ov-bench-fixture-status" aria-live="polite"></p>
+        <pre id="ov-bench-fixture-details" style="white-space:pre-wrap"></pre>
     </div>
     <?php
 }
