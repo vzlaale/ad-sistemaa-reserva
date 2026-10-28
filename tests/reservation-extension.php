@@ -91,8 +91,8 @@ require dirname(__DIR__) . '/includes/helpers/class-ov-availability.php';
 require dirname(__DIR__) . '/includes/api/class-ov-ajax-handler.php';
 require dirname(__DIR__) . '/includes/api/class-ov-google-calendar.php';
 
-function reservation($id, $start, $end, $duration = 30, $professional = 7) {
-    return (object) array('id' => $id, 'form_id' => 1, 'service_id' => 2, 'professional_id' => $professional,
+function reservation($id, $start, $end, $duration = 30, $professional = 7, $service = 2) {
+    return (object) array('id' => $id, 'form_id' => 1, 'service_id' => $service, 'professional_id' => $professional,
         'booking_date' => '2026-10-27', 'booking_time' => $start, 'end_time' => $end,
         'duration' => $duration, 'duration_unit' => 'minutes', 'status' => 'confirmed', 'booking_id' => 'OV-TEST');
 }
@@ -151,6 +151,23 @@ check(is_wp_error(edit(120)) && OV_Reservation::$rows[1]->duration === 90, 'Bloq
 $GLOBALS['wpdb']->lock_acquired = true;
 
 OV_Form::$mode = 'global';
+OV_Form::$capacity = 1;
+OV_Reservation::$rows = array(1 => reservation(1, '10:00:00', '10:30:00'),
+    2 => reservation(2, '10:30:00', '11:00:00', 30, 8, 3));
+check(edit(90) === 1, 'Otro servicio con otro profesional no consume el cupo');
+
+OV_Reservation::$rows = array(1 => reservation(1, '10:00:00', '10:30:00'),
+    2 => reservation(2, '10:30:00', '11:00:00', 30, 8));
+$result = edit(90);
+check(is_wp_error($result) && $result->get_error_code() === 'capacity_conflict', 'El mismo servicio llena el cupo global');
+check(OV_Reservation::$rows[1]->duration === 30, 'El conflicto de cupo conserva la duración original');
+
+OV_Reservation::$rows = array(1 => reservation(1, '10:00:00', '10:30:00'),
+    2 => reservation(2, '10:30:00', '11:00:00', 30, 7, 3));
+$result = edit(90);
+check(is_wp_error($result) && $result->get_error_code() === 'professional_conflict', 'Otro servicio del mismo profesional impide ampliar');
+check(OV_Reservation::$rows[1]->duration === 30, 'El conflicto profesional conserva la duración original');
+
 OV_Form::$capacity = 2;
 OV_Reservation::$rows = array(1 => reservation(1, '10:00:00', '10:30:00'), 2 => reservation(2, '10:30:00', '11:00:00', 30, 8));
 check(edit(90) === 1, 'Un cupo libre permite ampliar');
