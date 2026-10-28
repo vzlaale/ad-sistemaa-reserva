@@ -53,12 +53,14 @@ El plugin temporal `tests/ov-booking-benchmark/` versión 0.2.0 añade un fixtur
 5. Comparar pares de archivos con `tests/compare-p2-benchmarks.ps1`. Para meses de varios días usar `-RequireDateAdd`. El script falla si cambia el contexto, difieren fechas/cupos o no bajan las consultas medianas. Revisar además `key`, `type`, `rows` y `Extra` de `date_add_explain`; registrar volumen de reservas, latencia mediana/p95 y cualquier regresión. Un plan `EXPLAIN` por sí solo no demuestra una mejora.
 6. Con 1.8.7 activo, pulsar **Eliminar fixture** y esperar «Fixture eliminado». Comprobar que no queden formularios ni reservas `P2<run>`. Restaurar la versión inicial del núcleo y las integraciones salientes, desactivar y borrar el diagnóstico, y verificar `ov_booking_db_version=1.8.0`. Conservar los JSON y el respaldo. Si la limpieza detecta reservas ajenas en los formularios sintéticos o falla una consulta, se detiene sin borrar las entidades: resolver con el respaldo y el identificador `run`.
 
-Ejemplo de comparación local:
+Ejemplo de comparación de un par:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/compare-p2-benchmarks.ps1 `
   -Baseline dist/p2-month-1.8.3-solo.json `
   -Current dist/p2-month-1.8.7-solo.json -RequireDateAdd
 ```
+
+Cuando estén las 24 mediciones de cada versión sobre **el mismo fixture**, `tests/audit-p2-evidence.ps1` valida el conjunto completo. Recibe cuatro rutas mensuales por versión y una carpeta con veinte JSON diarios por versión. Comprueba versión, mes, IDs, historial, fechas, horarios, cupos y mejora de consultas; devuelve los planes `EXPLAIN` para revisión humana y señala inconsistencias entre `capacity`, `used` y `remaining`. Un resultado `PARITY_AND_SQL_PASS_EXPLAIN_REVIEW_REQUIRED` no cierra P2 por sí solo: aún hay que evaluar el costo de `DATE_ADD`.
 
 La tarea 02 permanece «En curso» hasta ejecutar ese ensayo y adjuntar los resultados. El instrumento preparado localmente no constituye evidencia de su ejecución en el clon.
