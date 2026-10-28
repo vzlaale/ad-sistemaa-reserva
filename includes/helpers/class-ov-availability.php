@@ -841,7 +841,9 @@ class OV_Availability {
             if ($this->professional_id !== null && (int) $other->professional_id === $this->professional_id) {
                 return new WP_Error('professional_conflict', __('El profesional ya tiene otra reserva en ese horario.', 'ov-booking-system'));
             }
-            if (!$per_professional) {
+            // El cupo global se cuenta por servicio; la ocupación del profesional
+            // se comprueba arriba para todos los servicios.
+            if (!$per_professional && (int) $other->service_id === (int) $reservation->service_id) {
                 $events[] = array(max($start, $other_start), 1);
                 $events[] = array(min($end, $other_end), -1);
             }
