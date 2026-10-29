@@ -63,20 +63,47 @@ class Test_DB {
 
 class OV_Form {
     public function get($id) {
+        ++$GLOBALS['form_reads'];
         return $id === 1 ? clone $GLOBALS['fixture_form'] : false;
     }
 }
 class OV_Service {
     public function get($id) {
+        ++$GLOBALS['service_reads'];
         return $id === 2 ? clone $GLOBALS['fixture_service'] : false;
+    }
+    public function get_by_form($form_id, $professional_id = null, $active_only = true, $public_only = false) {
+        ++$GLOBALS['service_list_calls'];
+        check($form_id === 1 && $active_only && $public_only === !empty($GLOBALS['fixture_form']->enable_professionals),
+            'El listado conserva los filtros de servicios activos y públicos');
+        return array(clone $GLOBALS['fixture_service']);
     }
 }
 class OV_Professional {
+    public function get($id) {
+        ++$GLOBALS['professional_reads'];
+        return isset($GLOBALS['fixture_professional_rows'][$id]) ? clone $GLOBALS['fixture_professional_rows'][$id] : false;
+    }
+    public function get_by_form($form_id, $active_only = true, $public_only = false) {
+        ++$GLOBALS['professional_list_calls'];
+        check($form_id === 1 && $active_only && $public_only, 'El listado filtra profesionales públicos activos');
+        return $GLOBALS['fixture_professionals'];
+    }
     public function is_public_for_service($professional_id, $service_id, $form_id = null) {
         return $professional_id === 3 && $service_id === 2 && $form_id === 1;
     }
     public function get_by_service($service_id, $active_only = true, $public_only = false) {
+        ++$GLOBALS['professional_service_list_calls'];
+        check($service_id === 2 && $active_only && $public_only, 'La relación filtra profesionales públicos activos');
         return $GLOBALS['fixture_professionals'];
+    }
+}
+class OV_Field {
+    public function get_by_form($form_id, $active_only = true) {
+        ++$GLOBALS['field_list_calls'];
+        check($form_id === 1 && $active_only, 'Solo se listan campos activos del formulario');
+        return array((object) array('field_name' => 'name', 'field_label' => 'Nombre',
+            'field_type' => 'text', 'required' => 1, 'placeholder' => '', 'field_options' => array()));
     }
 }
 class OV_Availability {
@@ -136,14 +163,30 @@ function call_route($method, $params, $post = false) {
 
 $GLOBALS['wpdb'] = new Test_DB();
 $GLOBALS['logged_in'] = true;
+$GLOBALS['form_reads'] = 0;
+$GLOBALS['service_reads'] = 0;
+$GLOBALS['service_list_calls'] = 0;
+$GLOBALS['professional_reads'] = 0;
+$GLOBALS['professional_list_calls'] = 0;
+$GLOBALS['professional_service_list_calls'] = 0;
+$GLOBALS['field_list_calls'] = 0;
 $GLOBALS['fixture_form'] = (object) array(
     'id' => 1, 'status' => 'active', 'timezone' => 'UTC',
     'enable_professionals' => 0, 'allow_any_professional' => 1,
     'booking_limit_hours' => 0, 'week_starts_on' => 1,
     'colors_config' => array(), 'terms_config' => array(),
 );
-$GLOBALS['fixture_service'] = (object) array('id' => 2, 'form_id' => 1, 'active' => 1);
-$GLOBALS['fixture_professionals'] = array((object) array('id' => 3));
+$GLOBALS['fixture_service'] = (object) array('id' => 2, 'form_id' => 1, 'active' => 1,
+    'name' => 'Consulta', 'description' => '', 'duration' => 30, 'duration_unit' => 'minutes',
+    'price_text' => '', 'image_url' => '');
+$GLOBALS['fixture_professional_rows'] = array(
+    3 => (object) array('id' => 3, 'form_id' => 1, 'active' => 1, 'booking_visibility' => 'public',
+        'name' => 'Profesional público', 'bio' => '', 'avatar_url' => '', 'display_order' => 0),
+    4 => (object) array('id' => 4, 'form_id' => 1, 'active' => 1, 'booking_visibility' => 'admin_only'),
+    5 => (object) array('id' => 5, 'form_id' => 1, 'active' => 0, 'booking_visibility' => 'public'),
+    6 => (object) array('id' => 6, 'form_id' => 9, 'active' => 1, 'booking_visibility' => 'public'),
+);
+$GLOBALS['fixture_professionals'] = array($GLOBALS['fixture_professional_rows'][3]);
 
 $today = new DateTimeImmutable('today', new DateTimeZone('UTC'));
 $first_month = $today->format('Y-m');
@@ -209,7 +252,7 @@ check($response->success && OV_Availability::$calls > 0, 'Cualquier profesional 
 $GLOBALS['fixture_professionals'] = array();
 $response = call_route('get_month_availability', array_merge($month_params, array('professional_id' => '0')));
 check($response->success && $response->data['available_dates'] === array() && OV_Availability::$calls === 0, 'Sin profesionales públicos no hay fechas disponibles');
-$GLOBALS['fixture_professionals'] = array((object) array('id' => 3));
+$GLOBALS['fixture_professionals'] = array($GLOBALS['fixture_professional_rows'][3]);
 $response = call_route('get_month_availability', array_merge($month_params, array('professional_id' => '3')));
 check($response->success, 'Profesional público asignado permitido');
 $response = call_route('get_month_availability', array_merge($month_params, array('professional_id' => '4')));
@@ -275,5 +318,94 @@ $method->setAccessible(true);
 $outside_date = $last_month->modify('+1 month')->format('Y-m-d');
 check($method->invoke(new OV_Ajax_Handler(), 1, 2, null, $outside_date, false) === true, 'Administración conserva el horizonte previo');
 check($method->invoke(new OV_Ajax_Handler(), 1, 2, null, $outside_date, true) === false, 'Contexto público rechaza el séptimo mes');
+
+// Las lecturas públicas deben proteger el formulario también si se llama al AJAX directamente.
+foreach (array(false, true) as $logged_in) {
+    $GLOBALS['logged_in'] = $logged_in;
+    $GLOBALS['fixture_form']->status = 'active';
+    $GLOBALS['fixture_form']->enable_professionals = 1;
+    $GLOBALS['fixture_form']->allow_any_professional = 1;
+
+    $response = call_route('get_services', array('form_id' => '1'));
+    check($response->success && count($response->data) === 1 && $response->data[0]['id'] === 2, 'Servicios públicos del formulario activo');
+    $response = call_route('get_professionals', array('form_id' => '1'));
+    check($response->success && count($response->data) === 1 && $response->data[0]['id'] === 3, 'Profesionales públicos del formulario activo');
+    $response = call_route('get_professionals_by_service', array('service_id' => '2'));
+    check($response->success && count($response->data['professionals']) === 1, 'Profesionales del servicio activo');
+    $response = call_route('get_form_fields', array('form_id' => '1'));
+    check($response->success && $response->data[0]['name'] === 'name', 'Campos del formulario activo');
+    $response = call_route('get_form_config', array('form_id' => '1'));
+    check($response->success && $response->data['enable_professionals'], 'Configuración del formulario activo');
+
+    $GLOBALS['fixture_form']->status = 'inactive';
+    $before = array($GLOBALS['service_list_calls'], $GLOBALS['professional_list_calls'],
+        $GLOBALS['professional_service_list_calls'], $GLOBALS['field_list_calls']);
+    foreach (array(
+        array('get_services', array('form_id' => '1')),
+        array('get_professionals', array('form_id' => '1')),
+        array('get_professionals_by_service', array('service_id' => '2')),
+        array('get_form_fields', array('form_id' => '1')),
+        array('get_form_config', array('form_id' => '1')),
+    ) as $request) {
+        $response = call_route($request[0], $request[1]);
+        check(!$response->success && $response->status === 404, 'Formulario inactivo no publica datos');
+    }
+    check($before === array($GLOBALS['service_list_calls'], $GLOBALS['professional_list_calls'],
+        $GLOBALS['professional_service_list_calls'], $GLOBALS['field_list_calls']), 'No se consultan datos de formularios inactivos');
+    $GLOBALS['fixture_form']->status = 'active';
+
+    foreach (array('get_services', 'get_professionals', 'get_form_fields', 'get_form_config') as $method_name) {
+        $response = call_route($method_name, array('form_id' => '9'));
+        check(!$response->success && $response->status === 404, 'Formulario inexistente no publica datos');
+        $before_form_reads = $GLOBALS['form_reads'];
+        $response = call_route($method_name, array('form_id' => array('1')));
+        check(!$response->success && $response->status === 400 && $GLOBALS['form_reads'] === $before_form_reads,
+            'ID de formulario malformado se rechaza antes de consultar');
+    }
+    $before_service_reads = $GLOBALS['service_reads'];
+    $response = call_route('get_professionals_by_service', array('service_id' => array('2')));
+    check(!$response->success && $response->status === 400 && $GLOBALS['service_reads'] === $before_service_reads,
+        'ID de servicio malformado se rechaza antes de consultar');
+
+    $before = $GLOBALS['service_list_calls'];
+    foreach (array(4, 5, 6) as $professional_id) {
+        $response = call_route('get_services', array('form_id' => '1', 'professional_id' => (string) $professional_id));
+        check(!$response->success && $response->status === 404 && $GLOBALS['service_list_calls'] === $before,
+            'Profesional privado, inactivo o ajeno no obtiene servicios');
+    }
+    $before_form_reads = $GLOBALS['form_reads'];
+    $response = call_route('get_services', array('form_id' => '1', 'professional_id' => array('3')));
+    check(!$response->success && $response->status === 400 && $GLOBALS['form_reads'] === $before_form_reads,
+        'ID de profesional malformado se rechaza antes de consultar');
+    check(call_route('get_services', array('form_id' => '1', 'professional_id' => '3'))->success,
+        'Profesional público del formulario obtiene servicios');
+    check(call_route('get_services', array('form_id' => '1', 'professional_id' => '0'))->success,
+        'Cualquier profesional habilitado obtiene servicios');
+    $GLOBALS['fixture_form']->allow_any_professional = 0;
+    $response = call_route('get_services', array('form_id' => '1', 'professional_id' => '0'));
+    check(!$response->success && $response->status === 404, 'Cualquier profesional deshabilitado no obtiene servicios');
+    $GLOBALS['fixture_form']->allow_any_professional = 1;
+
+    $before = $GLOBALS['professional_service_list_calls'];
+    $GLOBALS['fixture_service']->active = 0;
+    $response = call_route('get_professionals_by_service', array('service_id' => '2'));
+    check(!$response->success && $response->status === 404 && $GLOBALS['professional_service_list_calls'] === $before,
+        'Servicio inactivo no publica profesionales');
+    $GLOBALS['fixture_service']->active = 1;
+    $GLOBALS['fixture_service']->form_id = 9;
+    $response = call_route('get_professionals_by_service', array('service_id' => '2'));
+    check(!$response->success && $response->status === 404 && $GLOBALS['professional_service_list_calls'] === $before,
+        'Servicio de formulario inexistente no publica profesionales');
+    $GLOBALS['fixture_service']->form_id = 1;
+
+    $GLOBALS['fixture_form']->enable_professionals = 0;
+    $before = $GLOBALS['professional_list_calls'];
+    $response = call_route('get_professionals', array('form_id' => '1'));
+    check($response->success && $response->data === array() && $GLOBALS['professional_list_calls'] === $before,
+        'Formulario sin profesionales devuelve una lista vacía');
+    $response = call_route('get_professionals_by_service', array('service_id' => '2'));
+    check(!$response->success && $response->status === 404, 'Servicio sin profesionales habilitados no publica profesionales');
+    check(call_route('get_services', array('form_id' => '1'))->success, 'Formulario sin profesionales conserva servicios');
+}
 
 echo "Rutas públicas y límites: OK\n";
