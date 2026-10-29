@@ -91,6 +91,12 @@ class OV_Ajax_Handler {
         ));
     }
 
+    /** Un formulario inexistente o inactivo no publica sus datos. */
+    private function get_active_public_form($form_id) {
+        $form = (new OV_Form())->get($form_id);
+        return $form && $form->status === 'active' ? $form : false;
+    }
+
     private function get_public_availability_form($form_id, $service_id, $professional_id, &$service_out = null) {
         $form = (new OV_Form())->get($form_id);
         $service = (new OV_Service())->get($service_id);
@@ -215,20 +221,41 @@ class OV_Ajax_Handler {
      */
     public function get_services() {
         try {
-            $form_id = isset($_REQUEST['form_id']) ? intval($_REQUEST['form_id']) : 0;
-            $professional_id = isset($_REQUEST['professional_id']) ? intval($_REQUEST['professional_id']) : null;
-
-            if (!$form_id) {
-                wp_send_json_error(array(
-                    'message' => __('ID de formulario no válido', 'ov-booking-system')
-                ));
-                return;
+            $form_id = $this->parse_public_integer($_REQUEST['form_id'] ?? null);
+            $professional_id = null;
+            if (isset($_REQUEST['professional_id']) && $_REQUEST['professional_id'] !== '') {
+                $professional_id = $this->parse_public_integer($_REQUEST['professional_id'], true);
             }
 
-            $form_model = new OV_Form();
-            $form = $form_model->get($form_id);
+            if ($form_id === false || $professional_id === false) {
+                wp_send_json_error(array(
+                    'message' => __('ID de formulario o profesional no válido', 'ov-booking-system')
+                ), 400);
+            }
+
+            $form = $this->get_active_public_form($form_id);
+            if (!$form) {
+                wp_send_json_error(array('message' => __('Formulario no encontrado', 'ov-booking-system')), 404);
+            }
+
+            if (empty($form->enable_professionals)) {
+                if ($professional_id !== null) {
+                    wp_send_json_error(array('message' => __('Profesional no disponible', 'ov-booking-system')), 404);
+                }
+            } elseif ($professional_id === 0) {
+                if (empty($form->allow_any_professional)) {
+                    wp_send_json_error(array('message' => __('Profesional no disponible', 'ov-booking-system')), 404);
+                }
+            } elseif ($professional_id !== null) {
+                $professional = (new OV_Professional())->get($professional_id);
+                if (!$professional || (int) $professional->form_id !== $form_id ||
+                    empty($professional->active) || ($professional->booking_visibility ?? '') !== 'public') {
+                    wp_send_json_error(array('message' => __('Profesional no disponible', 'ov-booking-system')), 404);
+                }
+            }
+
             $service_model = new OV_Service();
-            $public_only = $form && !empty($form->enable_professionals);
+            $public_only = !empty($form->enable_professionals);
             $services = $service_model->get_by_form($form_id, $professional_id, true, $public_only);
 
             // Formatear servicios para el frontend
@@ -256,12 +283,20 @@ class OV_Ajax_Handler {
      */
     public function get_professionals() {
         try {
-            $form_id = isset($_REQUEST['form_id']) ? intval($_REQUEST['form_id']) : 0;
+            $form_id = $this->parse_public_integer($_REQUEST['form_id'] ?? null);
 
-            if (!$form_id) {
+            if ($form_id === false) {
                 wp_send_json_error(array(
                     'message' => __('ID de formulario no válido', 'ov-booking-system')
-                ));
+                ), 400);
+            }
+
+            $form = $this->get_active_public_form($form_id);
+            if (!$form) {
+                wp_send_json_error(array('message' => __('Formulario no encontrado', 'ov-booking-system')), 404);
+            }
+            if (empty($form->enable_professionals)) {
+                wp_send_json_success(array());
                 return;
             }
 
@@ -462,13 +497,16 @@ class OV_Ajax_Handler {
      */
     public function get_form_fields() {
         try {
-            $form_id = isset($_REQUEST['form_id']) ? intval($_REQUEST['form_id']) : 0;
+            $form_id = $this->parse_public_integer($_REQUEST['form_id'] ?? null);
 
-            if (!$form_id) {
+            if ($form_id === false) {
                 wp_send_json_error(array(
                     'message' => __('ID de formulario no válido', 'ov-booking-system')
-                ));
-                return;
+                ), 400);
+            }
+
+            if (!$this->get_active_public_form($form_id)) {
+                wp_send_json_error(array('message' => __('Formulario no encontrado', 'ov-booking-system')), 404);
             }
 
             $field_model = new OV_Field();
@@ -897,10 +935,8 @@ class OV_Ajax_Handler {
                 ), 400);
             }
 
-            $form_model = new OV_Form();
-            $form = $form_model->get($form_id);
-
-            if (!$form || $form->status !== 'active') {
+            $form = $this->get_active_public_form($form_id);
+            if (!$form) {
                 wp_send_json_error(array(
                     'message' => __('Formulario no encontrado', 'ov-booking-system')
                 ), 404);
@@ -1792,24 +1828,21 @@ class OV_Ajax_Handler {
      */
     public function get_professionals_by_service() {
         try {
-            $service_id = isset($_REQUEST['service_id']) ? intval($_REQUEST['service_id']) : 0;
+            $service_id = $this->parse_public_integer($_REQUEST['service_id'] ?? null);
 
-            if (!$service_id) {
+            if ($service_id === false) {
                 wp_send_json_error(array(
                     'message' => __('ID de servicio no válido', 'ov-booking-system')
-                ));
-                return;
+                ), 400);
             }
 
             $service_model = new OV_Service();
             $service = $service_model->get($service_id);
-            $form_model = new OV_Form();
-            $form = $service ? $form_model->get($service->form_id) : null;
+            $form = $service ? $this->get_active_public_form((int) $service->form_id) : false;
             if (!$service || empty($service->active) || !$form || empty($form->enable_professionals)) {
                 wp_send_json_error(array(
                     'message' => __('Servicio no disponible para reservas públicas', 'ov-booking-system')
-                ));
-                return;
+                ), 404);
             }
 
             $professional_model = new OV_Professional();
