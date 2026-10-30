@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.8.8 - Eventos y lecturas públicas
+
+- Las ampliaciones administrativas emiten `ov_booking_reservation_updated` después de guardarse; WhatsApp 1.0.4 ignora cambios de solo duración.
+- Las lecturas públicas de servicios, profesionales, campos y configuración rechazan formularios inactivos y relaciones no públicas.
+- Sin cambios de esquema. Antes de actualizar el núcleo, instalar WhatsApp 1.0.4 si se usa ese add-on.
+
 ## 1.8.7 - Ampliación de reservas
 
 - Administradores y OV-Manager pueden ampliar en tramos de 30 minutos una reserva activa sin crear otra reserva ni enviar un WhatsApp automático.

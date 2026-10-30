@@ -1,4 +1,4 @@
-# OV Booking System 1.8.7
+# OV Booking System 1.8.8
 
 Plugin de reservas para WordPress, compatible con Divi y otros temas.
 
@@ -26,6 +26,8 @@ habilita únicamente las fechas que devuelve el servidor, incluidos horarios esp
 La versión 1.8.6 calcula los días laborables de los profesionales en una consulta de lote,
 conservando el campo `working_days` de la configuración pública.
 La versión 1.8.7 permite ampliar una reserva activa desde el editor sin crear otra cita.
+La versión 1.8.8 emite el evento de actualización también al ampliar y protege las
+lecturas públicas de formularios inactivos.
 El esquema de base de datos permanece en 1.8.0.
 
 ## Requisitos asumidos
@@ -81,5 +83,7 @@ Los add-ons se instalan como plugins separados y se registran mediante
 `ov_booking_before_reservation_create`; después se mantienen los eventos
 `ov_booking_reservation_created`, `ov_booking_reservation_updated` y
 `ov_booking_reservation_deleted`.
-La ampliación administrativa omite `ov_booking_reservation_updated` para evitar que
-un add-on envíe un aviso automático por el cambio de duración.
+La ampliación administrativa emite `ov_booking_reservation_updated` después de guardar.
+Cada add-on decide si los campos modificados requieren una acción; WhatsApp 1.0.4
+ignora los cambios que solo afectan la duración y el fin de la reserva. Actualiza
+ese add-on antes de instalar el núcleo 1.8.8.

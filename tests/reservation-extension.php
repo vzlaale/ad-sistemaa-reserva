@@ -66,6 +66,8 @@ class OV_DateTime {
 class OV_Reservation {
     public static $rows = array();
     public static $last_emit = null;
+    public static $last_update_data = array();
+    public static $update_calls = 0;
     public function get($id) { return isset(self::$rows[$id]) ? clone self::$rows[$id] : null; }
     public function get_by_date($form, $date, $service = null, $professional = null, $exclude = null) {
         return array_values(array_filter(self::$rows, static function($row) use ($form, $date, $service, $professional, $exclude) {
@@ -81,7 +83,9 @@ class OV_Reservation {
         }));
     }
     public function update($id, $data, $emit_updated_event = true) {
+        ++self::$update_calls;
         self::$last_emit = $emit_updated_event;
+        self::$last_update_data = $data;
         foreach ($data as $key => $value) self::$rows[$id]->$key = $value;
         return 1;
     }
@@ -107,7 +111,9 @@ function edit($duration, $time = '10:00', $date = '2026-10-27', $status = 'confi
 OV_Reservation::$rows = array(1 => reservation(1, '10:00:00', '10:30:00'));
 check(edit(90) === 1, 'Ampliar de 30 a 90 minutos');
 check(OV_Reservation::$rows[1]->end_time === '11:30' && OV_Reservation::$rows[1]->duration === 90, 'Se actualiza una sola reserva');
-check(OV_Reservation::$last_emit === false, 'La ampliación no emite el hook de notificación');
+check(OV_Reservation::$last_emit === true, 'La ampliación permite emitir el hook de actualización');
+check(OV_Reservation::$last_update_data['duration'] === 90 &&
+    OV_Reservation::$last_update_data['end_time'] === '11:30', 'El hook recibe la duración y el fin nuevos');
 check(edit(120) === 1 && OV_Reservation::$rows[1]->end_time === '12:00', 'Segunda ampliación');
 
 $form = (object) array('calendar_config' => array(), 'timezone' => 'America/Santiago');
@@ -116,9 +122,11 @@ check($event['start_utc'] !== $event['end_utc'] &&
     (strtotime($event['end_utc']) - strtotime($event['start_utc'])) === 120 * 60, 'Calendario usa duración de reserva');
 
 OV_Reservation::$rows = array(1 => reservation(1, '10:00:00', '10:30:00'), 2 => reservation(2, '11:00:00', '11:30:00'));
+$before_updates = OV_Reservation::$update_calls;
 $result = edit(90);
 check(is_wp_error($result) && $result->get_error_code() === 'professional_conflict', 'Otra cita impide ampliar');
 check(OV_Reservation::$rows[1]->duration === 30, 'Conflicto conserva la reserva original');
+check(OV_Reservation::$update_calls === $before_updates, 'La ampliación rechazada no actualiza ni emite eventos');
 
 OV_Reservation::$rows = array(1 => reservation(1, '10:00:00', '10:30:00'));
 OV_Schedule::$breaks = array((object) array('start_time' => '11:00:00', 'end_time' => '12:00:00'));

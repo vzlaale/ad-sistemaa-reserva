@@ -1177,8 +1177,7 @@ class OV_Ajax_Handler {
                     }
                 }
             }
-            // Una ampliación no dispara el hook que usa el add-on de mensajes.
-            return $model->update($reservation_id, $data, !$extends);
+            return $model->update($reservation_id, $data);
         } finally {
             $this->release_booking_lock($lock_name);
         }

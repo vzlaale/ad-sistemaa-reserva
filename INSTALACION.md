@@ -1,4 +1,4 @@
-# Instalación y actualización — OV Booking 1.8.7
+# Instalación y actualización — OV Booking 1.8.8
 
 ## Instalación nueva
 
@@ -12,19 +12,20 @@
 El teléfono es obligatorio. Se aceptan números internacionales E.164 y, para Chile,
 `+56 9 XXXX XXXX`, `569XXXXXXXX` o `9XXXXXXXX`; se guarda como `569XXXXXXXX`.
 
-## Actualización desde 1.7 a 1.8.7
+## Actualización desde 1.7 a 1.8.8
 
 1. Crea un respaldo verificable de base de datos y archivos.
 2. Ensaya la actualización sobre un clon de producción.
-3. Sustituye el plugin conservando el slug `ov-booking-system`.
-4. Instala la versión 1.8.7 y actívala o carga el panel para ejecutar la migración idempotente del esquema 1.8.0.
-5. Verifica que `ov_booking_version` sea `1.8.7` y `ov_booking_db_version` sea `1.8.0`.
+3. Si usas WhatsApp, actualiza primero el add-on a 1.0.4 bajo su carpeta instalada.
+4. Sustituye el núcleo conservando el slug `ov-booking-system`.
+5. Instala la versión 1.8.8 y actívala o carga el panel para ejecutar la migración idempotente del esquema 1.8.0.
+6. Verifica que `ov_booking_version` sea `1.8.8` y `ov_booking_db_version` sea `1.8.0`.
 
 La migración añade idempotencia, origen de reserva, huella de IP no reversible, índices
 de disponibilidad y contadores antiabuso. También asegura la tabla de pacientes. No
 elimina reservas ni columnas históricas.
 
-Las versiones 1.8.1 a 1.8.7 corrigen el funcionamiento sin añadir otra migración de esquema.
+Las versiones 1.8.1 a 1.8.8 corrigen el funcionamiento sin añadir otra migración de esquema.
 Comprueba que existe la tabla `wp_ov_booking_rate_limits` (con el prefijo real del sitio):
 el calendario público y los horarios diarios de 1.8.5 la utilizan para limitar consultas anónimas.
 
