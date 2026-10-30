@@ -316,8 +316,8 @@ class OV_Reservation {
     /**
      * Actualizar reserva
      *
-     * @param bool $emit_updated_event Desactivar solo para una ampliación administrativa
-     *                                 que no debe generar avisos automáticos.
+     * @param bool $emit_updated_event Conservado para compatibilidad con llamadas existentes.
+     *                                 Las ediciones administrativas usan el valor predeterminado.
      */
     public function update($id, $data, $emit_updated_event = true) {
         $previous = $this->get($id);
