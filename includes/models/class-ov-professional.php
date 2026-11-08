@@ -125,7 +125,7 @@ class OV_Professional {
             'bio' => sanitize_textarea_field($data['bio'] ?? ''),
             'avatar_url' => esc_url_raw($data['avatar_url'] ?? ''),
             'calendar_id' => sanitize_text_field($data['calendar_id'] ?? ''),
-            'active' => isset($data['active']) ? 1 : 0,
+            'active' => !empty($data['active']) ? 1 : 0,
             'booking_visibility' => $this->sanitize_visibility($data['booking_visibility'] ?? 'public'),
             'display_order' => intval($data['display_order'] ?? 0)
         );
