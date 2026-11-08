@@ -107,7 +107,7 @@ class OV_Service {
             'price' => isset($data['price']) ? floatval($data['price']) : null,
             'price_text' => substr(sanitize_text_field($data['price_text'] ?? ''), 0, 255),
             'image_url' => esc_url_raw($data['image_url'] ?? ''),
-            'active' => isset($data['active']) ? 1 : 0,
+            'active' => !empty($data['active']) ? 1 : 0,
             'display_order' => intval($data['display_order'] ?? 0)
         );
 
