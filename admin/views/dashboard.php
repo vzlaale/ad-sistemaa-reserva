@@ -105,6 +105,8 @@ $reservation_rut = static function($reservation) {
         : '';
 };
 
+$has_reservation_link_provider = has_filter('ov_booking_reservation_clinical_url_v1');
+
 foreach ($reservations as $reservation) {
     $service = $service_model->get($reservation->service_id);
     $professional = !empty($reservation->professional_id)
@@ -156,6 +158,9 @@ foreach ($reservations as $reservation) {
             'bookingId' => (string) $reservation->booking_id,
             'customerName' => $reservation->customer_name,
             'customerRut' => $reservation_rut($reservation),
+            'clinicalUrl' => $has_reservation_link_provider
+                ? esc_url_raw((string) apply_filters('ov_booking_reservation_clinical_url_v1', '', (int) $reservation->id, (int) $reservation->patient_id))
+                : '',
             'customerEmail' => $reservation->customer_email,
             'customerPhone' => $reservation->customer_phone,
             'serviceName' => $service_name,
@@ -302,6 +307,9 @@ $export_url = add_query_arg(array('action' => 'ov_booking_export_csv', '_wpnonce
         <div class="ov-dashboard-modal-footer">
             <div class="ov-dashboard-modal-danger"><button type="button" class="button button-link-delete" id="ov-dashboard-delete-reservation"><?php _e('Borrar reserva', 'ov-booking-system'); ?></button></div>
             <div class="ov-dashboard-modal-actions">
+                <?php if ($has_reservation_link_provider) : ?>
+                    <a class="button" id="ov-dashboard-clinical-record" hidden><?php esc_html_e('Abrir ficha clínica', 'ov-booking-system'); ?></a>
+                <?php endif; ?>
                 <button type="button" class="button ov-dashboard-modal-close"><?php _e('Cerrar', 'ov-booking-system'); ?></button>
                 <button type="button" class="button" id="ov-dashboard-whatsapp-reminder">🔔 <?php _e('Recordatorio', 'ov-booking-system'); ?></button>
                 <button type="button" class="button" id="ov-dashboard-whatsapp-confirmation"><?php _e('WhatsApp', 'ov-booking-system'); ?></button>
@@ -478,6 +486,7 @@ jQuery(function($) {
         updateDurationPreview();
         $('#ov-dashboard-whatsapp-confirmation').toggle(!!p.phoneForWhatsapp);
         $('#ov-dashboard-whatsapp-reminder').toggle(!!p.phoneForWhatsapp);
+        $('#ov-dashboard-clinical-record').attr('href', p.clinicalUrl || null).prop('hidden', !p.clinicalUrl);
         $('#ov-dashboard-reservation-modal').addClass('is-open').attr('aria-hidden','false');
     }
 
