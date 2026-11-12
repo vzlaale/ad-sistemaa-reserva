@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.1 - Ficha clínica para OV Booking Manager
+
+- Contratos internos para consultar pacientes y profesionales desde el rol OV Booking Manager.
+
 ## 1.9.0 - Integración con ficha clínica
 
 - Contratos internos versionados para consultar candidatos de agenda y habilitar el acceso desde el detalle de reserva.
