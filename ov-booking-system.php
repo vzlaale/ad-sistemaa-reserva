@@ -3,7 +3,7 @@
  * Plugin Name: OV Booking System
  * Plugin URI: https://ovdivi.com/ov-booking-system
  * Description: Sistema profesional de reservas con soporte para calendarios de clientes. Creado para Divi y compatible con cualquier tema de WordPress.
- * Version: 1.8.9
+ * Version: 1.9.0
  * Requires at least: 5.8
  * Requires PHP: 7.4
  * Author: Oscar Viedma
@@ -22,7 +22,7 @@ if (!defined('WPINC')) {
 /**
  * Información del plugin
  */
-define('OV_BOOKING_VERSION', '1.8.9');
+define('OV_BOOKING_VERSION', '1.9.0');
 define('OV_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('OV_BOOKING_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('OV_BOOKING_PLUGIN_BASENAME', plugin_basename(__FILE__));
@@ -70,3 +70,6 @@ function run_ov_booking_system() {
     $plugin->run();
 }
 run_ov_booking_system();
+
+require OV_BOOKING_PLUGIN_DIR . 'includes/class-ov-clinical-integration.php';
+OV_Clinical_Integration::register();
