@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.8.9 - Corrección de edición de reservas
+
+- La edición administrativa compara las duraciones como enteros; un valor devuelto como texto por MySQL ya no se interpreta como una ampliación.
+- Se pueden corregir nombre, teléfono, correo y notas sin cambiar el horario ni la duración, desde el panel principal y Todas las Reservas.
+- Las ampliaciones reales conservan sus validaciones de estado, incrementos de 30 minutos, disponibilidad y bloqueo. Sin cambios de esquema ni de contratos de eventos; WordPress 5.8 y PHP 7.4 siguen siendo los mínimos.
+
 ## 1.8.8 - Eventos y lecturas públicas
 
 - Las ampliaciones administrativas emiten `ov_booking_reservation_updated` después de guardarse; WhatsApp 1.0.4 ignora cambios de solo duración.
