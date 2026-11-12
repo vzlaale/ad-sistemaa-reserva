@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.0 - Integración con ficha clínica
+
+- Contratos internos versionados para consultar candidatos de agenda y habilitar el acceso desde el detalle de reserva.
+
 ## 1.8.9 - Corrección de edición de reservas
 
 - La edición administrativa compara las duraciones como enteros; un valor devuelto como texto por MySQL ya no se interpreta como una ampliación.

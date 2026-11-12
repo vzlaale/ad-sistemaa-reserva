@@ -69,6 +69,15 @@ Los add-ons deben mantener sus tablas y migraciones en su propio plugin. El núc
 
 ## Reglas de seguridad
 
+### Contratos para ficha clínica desde 1.9.0
+
+- `ov_booking_module_enabled_v1` recibe `(bool, string $module)` y devuelve el estado local del módulo.
+- `ov_booking_clinical_candidate_v1` recibe `(null, array $query)` después de `plugins_loaded`. Requiere sesión y licencia activa. Acepta una sola clave: `rut` normalizado (requiere `ov_clinical_identify`) o `reservation_id` entero (misma capacidad o acceso aprobado por el add-on). Devuelve `{patient_id:int, name:string, rut:string}` o `WP_Error` 400, 403, 404 o 409. Las reservas sin RUT propio coincidente requieren revisión. El consumidor verifica el dígito.
+- `ov_booking_clinical_reservation_access_v1` recibe `(false, int $patient_id)`. El add-on comprueba la asignación del usuario actual. Se invoca solo desde la consulta por reserva.
+- `ov_booking_reservation_clinical_url_v1` recibe `(string $url, int $reservation_id, int $patient_id)` en el dashboard. El add-on devuelve una URL administrativa autorizada o la cadena vacía. La pantalla de destino vuelve a autorizar la solicitud.
+
+### Reglas generales
+
 - No activar módulos solo ocultando menús.
 - Comprobar capacidades y licencia en cada página, AJAX y endpoint REST.
 - Usar nonces para formularios administrativos.
