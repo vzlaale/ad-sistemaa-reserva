@@ -1122,8 +1122,9 @@ class OV_Ajax_Handler {
             $moves = $date !== $reservation->booking_date ||
                 $time !== substr($reservation->booking_time, 0, 5);
             $service_model = new OV_Service();
-            $original_minutes = $service_model->get_duration_in_minutes($reservation);
-            $requested_minutes = $data['requested_duration_minutes'] ?? $original_minutes;
+            // MySQL puede devolver duration como texto; comparar minutos del mismo tipo.
+            $original_minutes = (int) $service_model->get_duration_in_minutes($reservation);
+            $requested_minutes = (int) ($data['requested_duration_minutes'] ?? $original_minutes);
             unset($data['requested_duration_minutes']);
             $extends = $requested_minutes !== $original_minutes;
             if ($extends && (
