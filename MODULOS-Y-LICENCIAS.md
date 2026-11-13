@@ -82,6 +82,12 @@ Los add-ons deben mantener sus tablas y migraciones en su propio plugin. El núc
 - `ov_booking_clinical_candidate_v2` conserva los argumentos y el resultado de la versión 1. Autoriza al OV Booking Manager con licencia activa en un entorno de pruebas y aplica las mismas comprobaciones de identidad.
 - `ov_booking_clinical_professionals_v1` recibe `(null, ?int $id)` con la misma autorización que la consulta de pacientes v2. Con `null` lista profesionales activos como pares `{id:int, name:string}`. Con un ID devuelve un par o `WP_Error` si el profesional no está disponible.
 
+### Contratos para ficha clínica desde 1.9.2
+
+- `ov_booking_clinical_services_v1` recibe `null` y devuelve los servicios activos como `{id:int, name:string, form_name:string}`.
+- `ov_booking_clinical_professionals_v2` recibe `(null, int[] $service_ids, ?int $id)`. Requiere al menos un ID de servicio. Devuelve los profesionales activos asignados a cualquiera de esos servicios activos del mismo formulario. Con un ID resuelve un único profesional o devuelve `WP_Error` 404.
+- Ambos contratos tienen la misma autorización que la consulta de pacientes v2. El contrato de profesionales v1 sigue disponible.
+
 ### Reglas generales
 
 - No activar módulos solo ocultando menús.
