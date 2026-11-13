@@ -7,6 +7,9 @@ final class OV_Clinical_Integration {
     public static function register() {
         add_filter('ov_booking_module_enabled_v1', array(__CLASS__, 'module_enabled'), 10, 2);
         add_filter('ov_booking_clinical_candidate_v1', array(__CLASS__, 'candidate'), 10, 2);
+        add_filter('ov_booking_clinical_manager_v1', array(__CLASS__, 'manager_access'));
+        add_filter('ov_booking_clinical_candidate_v2', array(__CLASS__, 'manager_candidate'), 10, 2);
+        add_filter('ov_booking_clinical_professionals_v1', array(__CLASS__, 'professionals'), 10, 2);
     }
 
     public static function module_enabled($enabled, $module) {
@@ -18,6 +21,28 @@ final class OV_Clinical_Integration {
             return self::error('ov_clinical_forbidden', 'No tienes permiso para buscar pacientes.', 403);
         }
 
+        return self::find_candidate($query, true);
+    }
+
+    public static function manager_access($allowed) {
+        $user = wp_get_current_user();
+        return $user->exists() && in_array(OV_Roles::ROLE, $user->roles, true)
+            && user_can($user, OV_Roles::CAPABILITY);
+    }
+
+    private static function can_query() {
+        return self::manager_access(false) && OV_Module_Manager::is_enabled('clinical_records')
+            && in_array(wp_get_environment_type(), array('local', 'development', 'staging'), true);
+    }
+
+    public static function manager_candidate($result, $query) {
+        if (!self::can_query()) {
+            return self::error('ov_clinical_forbidden', 'No tienes permiso para buscar pacientes.', 403);
+        }
+        return self::find_candidate($query, false);
+    }
+
+    private static function find_candidate($query, $legacy) {
         if (!is_array($query) || count($query) !== 1) {
             return self::error('ov_clinical_query', 'Indica un RUT o una reserva.', 400);
         }
@@ -25,14 +50,14 @@ final class OV_Clinical_Integration {
         $patients = new OV_Patient();
         if (isset($query['rut']) && is_string($query['rut'])
             && preg_match('/^[1-9][0-9]{6,7}[0-9K]$/D', $query['rut'])) {
-            if (!current_user_can('ov_clinical_identify')) {
+            if ($legacy && !current_user_can('ov_clinical_identify')) {
                 return self::error('ov_clinical_forbidden', 'No tienes permiso para buscar pacientes.', 403);
             }
             $patient = $patients->find_by_rut($query['rut']);
         } elseif (isset($query['reservation_id']) && is_int($query['reservation_id'])
             && $query['reservation_id'] > 0) {
             $reservation = (new OV_Reservation())->get($query['reservation_id']);
-            if (!current_user_can('ov_clinical_identify') && (!$reservation || empty($reservation->patient_id)
+            if ($legacy && !current_user_can('ov_clinical_identify') && (!$reservation || empty($reservation->patient_id)
                 || !apply_filters('ov_booking_clinical_reservation_access_v1', false, (int) $reservation->patient_id))) {
                 return self::error('ov_clinical_forbidden', 'No tienes permiso para abrir esta reserva.', 403);
             }
@@ -60,6 +85,31 @@ final class OV_Clinical_Integration {
             'name' => (string) $patient->name,
             'rut' => (string) $patient->rut,
         );
+    }
+
+    public static function professionals($result, $id) {
+        if (!self::can_query()) {
+            return self::error('ov_clinical_forbidden', 'No tienes permiso para consultar profesionales.', 403);
+        }
+        if ($id !== null && (!is_int($id) || $id < 1)) {
+            return self::error('ov_clinical_query', 'El identificador del profesional no es válido.', 400);
+        }
+        global $wpdb;
+        $table = (new OV_Database())->get_table_name('professionals');
+        $sql = "SELECT id,name FROM $table WHERE active = 1";
+        $rows = $wpdb->get_results($id === null
+            ? "$sql ORDER BY display_order,name,id"
+            : $wpdb->prepare("$sql AND id = %d", $id), ARRAY_A);
+        if ($wpdb->last_error) {
+            return self::error('ov_clinical_unavailable', 'No se pudo consultar la agenda de profesionales.', 503);
+        }
+        $professionals = array_map(static function ($row) {
+            return array('id' => (int) $row['id'], 'name' => (string) $row['name']);
+        }, $rows);
+        if ($id === null) {
+            return $professionals;
+        }
+        return $professionals[0] ?? self::error('ov_clinical_missing', 'Selecciona un profesional activo de la agenda.', 404);
     }
 
     private static function error($code, $message, $status) {
