@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.2 - Profesionales de ficha clínica por servicio
+
+- Consultas internas para listar servicios y filtrar profesionales activos por sus asignaciones de agenda.
+
 ## 1.9.1 - Ficha clínica para OV Booking Manager
 
 - Contratos internos para consultar pacientes y profesionales desde el rol OV Booking Manager.
