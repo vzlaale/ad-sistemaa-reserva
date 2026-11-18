@@ -1,10 +1,10 @@
-# Módulos y licencias — OV Booking 1.9.2
+# Módulos y licencias — OV Booking 1.9.3
 
 ## Modelo comercial
 
 OV Booking Core es obligatorio. Cada negocio tiene una instalación independiente de WordPress y los módulos adicionales se entregan como add-ons separados.
 
-La activación se guarda localmente por instalación, pero una licencia solo se considera válida cuando el servidor de licencias responde `valid: true`.
+La activación se guarda por instalación. El modo `api` predeterminado exige respuesta `valid: true` del servidor. El modo `local` optativo concede licencias desde el propio WordPress; no consulta un servidor ni usa claves.
 
 Para configurar el servidor de licencias en producción, define en `wp-config.php`:
 
@@ -33,6 +33,25 @@ La respuesta correcta debe ser JSON con esta forma mínima:
 
 `expires_at` puede omitirse para una licencia sin vencimiento.
 
+## Licencias locales desde 1.9.3
+
+```php
+define('OV_BOOKING_LICENSE_MODE', 'local');
+```
+
+Valores admitidos: `local` y `api`; ausencia equivale a `api`. Un valor inválido no habilita licencias. El cambio de modo no convierte las habilitaciones existentes. Para abandonar el servidor de pruebas, quitar `OV_BOOKING_ENABLE_TEST_LICENSE_SERVER` y `OV_BOOKING_LICENSE_API_URL` y desactivar su plugin; las claves TEST no autorizan producción.
+
+Solo `manage_options` puede activar, renovar o desactivar en modo local, con POST y nonce. El manager sin esa capacidad ve el estado. La activación exige fecha `Y-m-d`, hoy o posterior; vence a las 23:59:59 de ese día en la zona de WordPress y se almacena en UTC. Se registran módulo, instalación, URL, vencimiento y última cuenta/fecha responsable. Una copia del sitio con URL o identificador distintos necesita nueva activación administrativa. La concesión local confía en el administrador de esa instalación; no implementa facturación ni control comercial remoto.
+
+### Lectura tras vencimiento
+
+Registrar `'readonly_on_expiry' => true` permite conservar lectura después de una activación válida, aunque venza o se desactive la licencia. Predeterminado `false`: otros módulos mantienen el comportamiento anterior. Ficha Clínica 0.2.1 lo activa.
+
+- `ov_booking_module_enabled_v1`: `(bool $estado, string $module): bool`, solo operaciones con licencia activa. Conserva el contrato anterior.
+- `ov_booking_module_readable_v1`: `(bool $estado, string $module): bool`, activa o lectura posterior expresamente solicitada y ligada a una activación válida del modo correspondiente.
+
+Los filtros informan estado de licencia; **no conceden permisos de usuario**. El add-on valida rol, capacidades, identidad y nonce en cada solicitud. El núcleo permite consultas clínicas v2/servicios/profesionales al manager en solo lectura; el add-on impide toda transición clínica y financiera. Generar un PDF de un presupuesto ya aceptado puede ser una operación técnica de lectura con persistencia controlada. El contrato clínico v1 anterior conserva su exigencia de licencia activa.
+
 ## Registrar un add-on
 
 El add-on debe engancharse al evento de descubrimiento:
@@ -50,9 +69,9 @@ add_action('ov_booking_register_modules', function () {
 });
 ```
 
-El add-on también debe comprobar `OV_Module_Manager::current_user_can('customers')` antes de mostrar pantallas o procesar solicitudes.
+Los add-ons nuevos consultan `ov_booking_module_enabled_v1` y sus propios permisos antes de procesar escrituras; no dependen de clases internas del núcleo. Registrar un módulo usa la clase de registro recibida por `ov_booking_register_modules`. Las integraciones heredadas mantienen `OV_Module_Manager::current_user_can()` por compatibilidad.
 
-Los módulos con `requires_license=false`, como WhatsApp 1.0.4, aparecen como instalados en el gestor. Su funcionamiento se controla desde los ajustes del propio add-on; la pantalla Módulos no ofrece desactivarlos. Al integrar ambos controles en una versión futura del add-on, se deberá probar la transición con instalaciones ya activas antes de cambiar esta regla.
+Los módulos con `requires_license=false`, como WhatsApp 1.0.5, aparecen como instalados en el gestor. Su funcionamiento se controla desde los ajustes del propio add-on; la pantalla Módulos no ofrece desactivarlos. Al integrar ambos controles en una versión futura del add-on, se deberá probar la transición con instalaciones ya activas antes de cambiar esta regla.
 
 ## Eventos del núcleo
 
@@ -79,7 +98,7 @@ Los add-ons deben mantener sus tablas y migraciones en su propio plugin. El núc
 ### Contratos para ficha clínica desde 1.9.1
 
 - `ov_booking_clinical_manager_v1` devuelve un booleano. Comprueba que la cuenta activa tenga el rol `ov_manager` y la capacidad `manage_ov_booking`.
-- `ov_booking_clinical_candidate_v2` conserva los argumentos y el resultado de la versión 1. Autoriza al OV Booking Manager con licencia activa en un entorno de pruebas y aplica las mismas comprobaciones de identidad.
+- `ov_booking_clinical_candidate_v2` conserva los argumentos y el resultado de la versión 1. Autoriza al OV Booking Manager con licencia que permite lectura, también en producción desde 1.9.3, y aplica las mismas comprobaciones de identidad.
 - `ov_booking_clinical_professionals_v1` recibe `(null, ?int $id)` con la misma autorización que la consulta de pacientes v2. Con `null` lista profesionales activos como pares `{id:int, name:string}`. Con un ID devuelve un par o `WP_Error` si el profesional no está disponible.
 
 ### Contratos para ficha clínica desde 1.9.2
@@ -90,8 +109,7 @@ Los add-ons deben mantener sus tablas y migraciones en su propio plugin. El núc
 
 Las consultas de pacientes v2, profesionales v1/v2 y servicios v1 solo se autorizan
 para usuarios con rol `ov_manager` y capacidad `manage_ov_booking`, con el módulo
-`clinical_records` habilitado y licencia activa, en entornos WordPress `local`,
-`development` o `staging`. En `production` devuelven `WP_Error` 403. Los listados
+`clinical_records` con lectura autorizada, incluido `production` desde 1.9.3. Los listados
 devuelven un array vacío si no hay coincidencias y `WP_Error` 503 si falla la consulta
 de base de datos. Las consultas de profesionales rechazan argumentos inválidos con
 400 y un ID individual sin coincidencia con 404. Son filtros internos de servidor;

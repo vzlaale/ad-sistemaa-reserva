@@ -6,6 +6,7 @@ defined('ABSPATH') || exit;
 final class OV_Clinical_Integration {
     public static function register() {
         add_filter('ov_booking_module_enabled_v1', array(__CLASS__, 'module_enabled'), 10, 2);
+        add_filter('ov_booking_module_readable_v1', array(__CLASS__, 'module_readable'), 10, 2);
         add_filter('ov_booking_clinical_candidate_v1', array(__CLASS__, 'candidate'), 10, 2);
         add_filter('ov_booking_clinical_manager_v1', array(__CLASS__, 'manager_access'));
         add_filter('ov_booking_clinical_candidate_v2', array(__CLASS__, 'manager_candidate'), 10, 2);
@@ -16,6 +17,10 @@ final class OV_Clinical_Integration {
 
     public static function module_enabled($enabled, $module) {
         return is_string($module) && OV_Module_Manager::is_enabled($module);
+    }
+
+    public static function module_readable($readable, $module) {
+        return is_string($module) && OV_Module_Manager::is_readable($module);
     }
 
     public static function candidate($result, $query) {
@@ -33,8 +38,7 @@ final class OV_Clinical_Integration {
     }
 
     private static function can_query() {
-        return self::manager_access(false) && OV_Module_Manager::is_enabled('clinical_records')
-            && in_array(wp_get_environment_type(), array('local', 'development', 'staging'), true);
+        return self::manager_access(false) && OV_Module_Manager::is_readable('clinical_records');
     }
 
     public static function manager_candidate($result, $query) {
