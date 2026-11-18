@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.9.4 - OV Booking Superusuario
+
+- Nuevo rol `ov_superuser`, con capacidades del Administrador de WordPress del sitio, permisos de módulos y acceso clínico autorizado. Se crea de forma idempotente y solo se asigna expresamente mediante Usuarios; no cambia cuentas existentes ni el rol del registro público.
+- El superusuario conserva todos los menús de WordPress y usa el Dashboard de reservas, incluso si tiene además el rol manager. El manager conserva su interfaz y no recibe permisos técnicos ni de gestión de usuarios.
+- El contrato clínico de acceso admite el rol nuevo; los contratos de lectura y escritura continúan aplicando permisos y licencia. El Administrador ordinario sigue sin recibir acceso clínico implícito.
+- Compatible con Ficha Clínica 0.2.1; Ficha Clínica 0.2.2 añade enlaces visibles a sus ajustes privados. Sin cambio de tablas, almacenamiento, licencias ni cola de WhatsApp.
+
 ## 1.9.3 - Producción y licencias locales
 
 - Modo `local` optativo para conceder, renovar y desactivar licencias desde Módulos con `manage_options`, fecha obligatoria y vínculo instalación/sitio. Expiración al final del día local, persistida en UTC. Activaciones serializadas y restauración del estado anterior si falla su callback.
@@ -176,6 +183,13 @@
 
 # Changelog
 
+## 1.9.4 - OV Booking Superusuario
+
+- Nuevo rol `ov_superuser`, con capacidades del Administrador de WordPress del sitio, permisos de módulos y acceso clínico autorizado. Se crea de forma idempotente y solo se asigna expresamente mediante Usuarios; no cambia cuentas existentes ni el rol del registro público.
+- El superusuario conserva todos los menús de WordPress y usa el Dashboard de reservas, incluso si tiene además el rol manager. El manager conserva su interfaz y no recibe permisos técnicos ni de gestión de usuarios.
+- El contrato clínico de acceso admite el rol nuevo; los contratos de lectura y escritura continúan aplicando permisos y licencia. El Administrador ordinario sigue sin recibir acceso clínico implícito.
+- Compatible con Ficha Clínica 0.2.1; Ficha Clínica 0.2.2 añade enlaces visibles a sus ajustes privados. Sin cambio de tablas, almacenamiento, licencias ni cola de WhatsApp.
+
 ## 1.9.3 - Producción y licencias locales
 
 - Modo `local` optativo para conceder, renovar y desactivar licencias desde Módulos con `manage_options`, fecha obligatoria y vínculo instalación/sitio. Expiración al final del día local, persistida en UTC. Activaciones serializadas y restauración del estado anterior si falla su callback.
@@ -214,6 +228,13 @@
 - Se mantiene compatibilidad con Loco Translate y archivos de idioma dentro de `/languages`.
 
 # Changelog
+
+## 1.9.4 - OV Booking Superusuario
+
+- Nuevo rol `ov_superuser`, con capacidades del Administrador de WordPress del sitio, permisos de módulos y acceso clínico autorizado. Se crea de forma idempotente y solo se asigna expresamente mediante Usuarios; no cambia cuentas existentes ni el rol del registro público.
+- El superusuario conserva todos los menús de WordPress y usa el Dashboard de reservas, incluso si tiene además el rol manager. El manager conserva su interfaz y no recibe permisos técnicos ni de gestión de usuarios.
+- El contrato clínico de acceso admite el rol nuevo; los contratos de lectura y escritura continúan aplicando permisos y licencia. El Administrador ordinario sigue sin recibir acceso clínico implícito.
+- Compatible con Ficha Clínica 0.2.1; Ficha Clínica 0.2.2 añade enlaces visibles a sus ajustes privados. Sin cambio de tablas, almacenamiento, licencias ni cola de WhatsApp.
 
 ## 1.9.3 - Producción y licencias locales
 
