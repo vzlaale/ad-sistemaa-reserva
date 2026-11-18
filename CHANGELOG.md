@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.9.3 - Producción y licencias locales
+
+- Modo `local` optativo para conceder, renovar y desactivar licencias desde Módulos con `manage_options`, fecha obligatoria y vínculo instalación/sitio. Expiración al final del día local, persistida en UTC. Activaciones serializadas y restauración del estado anterior si falla su callback.
+- Modo `api` predeterminado compatible con el contrato JSON anterior. Las claves `TEST-*` no habilitan producción ni se convierten a licencias locales.
+- Contrato `ov_booking_module_readable_v1` y propiedad `readonly_on_expiry` optativa. Tras una activación válida, los módulos que la solicitan pueden conservar lectura al vencer o desactivar su licencia. Los permisos continúan a cargo del consumidor.
+- Contratos clínicos de OV Booking Manager habilitados en producción y en solo lectura. Ficha Clínica 0.2.1 bloquea las escrituras cuando corresponde.
+- Sin cambios de tablas: esquema 1.8.0. Mínimos del núcleo WordPress 5.8/PHP 7.4; conjunto clínico verificado con WordPress 7.1.4, PHP 8.3 y WhatsApp 1.0.5.
+
 ## 1.9.2 - Profesionales de ficha clínica por servicio
 
 - Consultas internas para listar servicios y filtrar profesionales activos por sus asignaciones de agenda.
@@ -168,6 +176,14 @@
 
 # Changelog
 
+## 1.9.3 - Producción y licencias locales
+
+- Modo `local` optativo para conceder, renovar y desactivar licencias desde Módulos con `manage_options`, fecha obligatoria y vínculo instalación/sitio. Expiración al final del día local, persistida en UTC. Activaciones serializadas y restauración del estado anterior si falla su callback.
+- Modo `api` predeterminado compatible con el contrato JSON anterior. Las claves `TEST-*` no habilitan producción ni se convierten a licencias locales.
+- Contrato `ov_booking_module_readable_v1` y propiedad `readonly_on_expiry` optativa. Tras una activación válida, los módulos que la solicitan pueden conservar lectura al vencer o desactivar su licencia. Los permisos continúan a cargo del consumidor.
+- Contratos clínicos de OV Booking Manager habilitados en producción y en solo lectura. Ficha Clínica 0.2.1 bloquea las escrituras cuando corresponde.
+- Sin cambios de tablas: esquema 1.8.0. Mínimos del núcleo WordPress 5.8/PHP 7.4; conjunto clínico verificado con WordPress 7.1.4, PHP 8.3 y WhatsApp 1.0.5.
+
 ## 1.6.0 - 2026-09-05
 
 - Añadida creación de reservas desde los calendarios del administrador y del Dashboard.
@@ -198,6 +214,14 @@
 - Se mantiene compatibilidad con Loco Translate y archivos de idioma dentro de `/languages`.
 
 # Changelog
+
+## 1.9.3 - Producción y licencias locales
+
+- Modo `local` optativo para conceder, renovar y desactivar licencias desde Módulos con `manage_options`, fecha obligatoria y vínculo instalación/sitio. Expiración al final del día local, persistida en UTC. Activaciones serializadas y restauración del estado anterior si falla su callback.
+- Modo `api` predeterminado compatible con el contrato JSON anterior. Las claves `TEST-*` no habilitan producción ni se convierten a licencias locales.
+- Contrato `ov_booking_module_readable_v1` y propiedad `readonly_on_expiry` optativa. Tras una activación válida, los módulos que la solicitan pueden conservar lectura al vencer o desactivar su licencia. Los permisos continúan a cargo del consumidor.
+- Contratos clínicos de OV Booking Manager habilitados en producción y en solo lectura. Ficha Clínica 0.2.1 bloquea las escrituras cuando corresponde.
+- Sin cambios de tablas: esquema 1.8.0. Mínimos del núcleo WordPress 5.8/PHP 7.4; conjunto clínico verificado con WordPress 7.1.4, PHP 8.3 y WhatsApp 1.0.5.
 
 ## 1.0.5 - Versión estable
 
