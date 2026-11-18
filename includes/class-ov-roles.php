@@ -12,6 +12,9 @@ class OV_Roles {
      */
     const ROLE = 'ov_manager';
 
+    const SUPERUSER_ROLE = 'ov_superuser';
+    const SUPERUSER_CAPABILITY = 'manage_ov_booking_system';
+
     /**
      * Capacidad que permite administrar todas las funciones de OV Booking.
      */
@@ -38,15 +41,50 @@ class OV_Roles {
                 )
             );
         } else {
-            $manager->add_cap('read');
-            $manager->add_cap(self::CAPABILITY);
+            if (!$manager->has_cap('read')) {
+                $manager->add_cap('read');
+            }
+            if (!$manager->has_cap(self::CAPABILITY)) {
+                $manager->add_cap(self::CAPABILITY);
+            }
         }
 
-        // El administrador sigue siendo el super usuario del sistema.
+        // El administrador conserva sus permisos técnicos, sin acceso clínico implícito.
         $administrator = get_role('administrator');
         if ($administrator) {
-            $administrator->add_cap(self::CAPABILITY);
+            if (!$administrator->has_cap(self::CAPABILITY)) {
+                $administrator->add_cap(self::CAPABILITY);
+            }
+            self::ensure_superuser_role($administrator);
         }
+    }
+
+    /** Register a site administrator role; never assign it or alter public registration. */
+    private static function ensure_superuser_role($administrator) {
+        $capabilities = $administrator->capabilities;
+        $capabilities['read'] = true;
+        $capabilities['manage_options'] = true;
+        $capabilities[self::CAPABILITY] = true;
+        $capabilities[self::SUPERUSER_CAPABILITY] = true;
+        $superuser = get_role(self::SUPERUSER_ROLE);
+        if (!$superuser) {
+            add_role(self::SUPERUSER_ROLE, 'OV Booking Superusuario', $capabilities);
+            return;
+        }
+        // Only persist actual changes: this check also runs on ordinary requests.
+        foreach ($capabilities as $capability => $grant) {
+            if (!array_key_exists($capability, $superuser->capabilities)
+                || $superuser->capabilities[$capability] !== (bool) $grant) {
+                $superuser->add_cap($capability, (bool) $grant);
+            }
+        }
+    }
+
+    public static function is_superuser($user = null) {
+        $user = $user instanceof WP_User ? $user : wp_get_current_user();
+        return $user->exists() && in_array(self::SUPERUSER_ROLE, (array) $user->roles, true)
+            && user_can($user, self::SUPERUSER_CAPABILITY)
+            && user_can($user, self::CAPABILITY) && user_can($user, 'manage_options');
     }
 
     /**

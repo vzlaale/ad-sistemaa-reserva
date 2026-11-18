@@ -290,20 +290,21 @@ class OV_Admin {
      */
     public function add_admin_menu() {
         $is_manager = $this->is_ov_manager();
+        $use_dashboard = $is_manager || OV_Roles::is_superuser();
 
-        // Menú principal. Para OV Manager, la puerta de entrada es el Dashboard.
+        // Manager y superusuario entran al Dashboard de reservas.
         // El administrador conserva Formularios como página principal del plugin.
         add_menu_page(
             __('OV Booking System', 'ov-booking-system'),
             __('Reservas', 'ov-booking-system'),
             OV_Roles::CAPABILITY,
             'ov-booking-system',
-            $is_manager ? array($this, 'display_dashboard_page') : array($this, 'display_forms_page'),
+            $use_dashboard ? array($this, 'display_dashboard_page') : array($this, 'display_forms_page'),
             'dashicons-calendar-alt',
             30
         );
 
-        if ($is_manager) {
+        if ($use_dashboard) {
             // Submenú: Dashboard
             add_submenu_page(
                 'ov-booking-system',
@@ -536,7 +537,7 @@ class OV_Admin {
      * Redirigir al OV Manager al Dashboard después del inicio de sesión.
      */
     public function login_redirect_ov_manager($redirect_to, $requested_redirect_to, $user) {
-        if ($user instanceof WP_User && in_array(OV_Roles::ROLE, (array) $user->roles, true)) {
+        if ($user instanceof WP_User && in_array(OV_Roles::ROLE, (array) $user->roles, true) && !OV_Roles::is_superuser($user)) {
             return admin_url('admin.php?page=ov-booking-system');
         }
 
@@ -549,14 +550,14 @@ class OV_Admin {
     private function is_ov_manager() {
         $user = wp_get_current_user();
 
-        return $user instanceof WP_User && in_array(OV_Roles::ROLE, (array) $user->roles, true);
+        return $user instanceof WP_User && in_array(OV_Roles::ROLE, (array) $user->roles, true) && !OV_Roles::is_superuser($user);
     }
 
     /**
      * Mostrar Dashboard para OV Manager.
      */
     public function display_dashboard_page() {
-        if (!$this->is_ov_manager()) {
+        if (!$this->is_ov_manager() && !OV_Roles::is_superuser()) {
             $this->display_forms_page();
             return;
         }

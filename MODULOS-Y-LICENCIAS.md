@@ -1,4 +1,4 @@
-# Módulos y licencias — OV Booking 1.9.3
+# Módulos y licencias — OV Booking 1.9.4
 
 ## Modelo comercial
 
@@ -114,6 +114,14 @@ devuelven un array vacío si no hay coincidencias y `WP_Error` 503 si falla la c
 de base de datos. Las consultas de profesionales rechazan argumentos inválidos con
 400 y un ID individual sin coincidencia con 404. Son filtros internos de servidor;
 no exponen endpoints públicos ni sustituyen los permisos del add-on.
+
+### OV Booking Superusuario desde 1.9.4
+
+El núcleo registra `ov_superuser` con las capacidades del Administrador del sitio, `manage_ov_booking` y `manage_ov_booking_system`. Se asigna únicamente por las pantallas nativas de Usuarios y sus comprobaciones de creación/promoción; no se incorpora a cuentas existentes ni al registro público. No concede superadministración de red Multisite. Los módulos registrados incluyen este rol al conceder sus capacidades.
+
+`ov_booking_clinical_manager_v1` también devuelve true para este rol explícito cuando conserva ambas capacidades OV y `manage_options`. Pacientes v2, servicios y profesionales usan el mismo acceso. La licencia continúa siendo necesaria para escritura y debe permitir lectura. Un Administrador ordinario sin rol clínico sigue recibiendo denegación clínica.
+
+OV Booking Manager conserva sus capacidades, menús y restricciones. El superusuario no recibe las restricciones visuales o redirecciones del manager, incluso si tiene ambos roles. El add-on conserva sus contratos y usa este acceso sin llamar clases internas adicionales del núcleo.
 
 ### Reglas generales
 

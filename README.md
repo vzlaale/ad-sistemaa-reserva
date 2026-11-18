@@ -1,4 +1,4 @@
-# OV Booking System 1.9.3
+# OV Booking System 1.9.4
 
 Plugin de reservas para WordPress, compatible con Divi y otros temas.
 
@@ -16,6 +16,10 @@ Plugin de reservas para WordPress, compatible con Divi y otros temas.
 
 Google Sheets y su Apps Script fueron retirados en 1.8.0. Una actualización conserva
 columnas históricas existentes, pero el plugin ya no las lee, escribe ni sincroniza.
+
+## OV Booking Superusuario
+
+Desde 1.9.4 se registra **OV Booking Superusuario** (`ov_superuser`): administración completa del WordPress del sitio, módulos y acceso clínico. Asignarlo expresamente a la cuenta personal del administrador desde **Usuarios → Añadir nuevo/Editar → Rol**. La actualización no promueve cuentas ni modifica el registro público. Recepción conserva **OV Booking Manager**, sin ajustes técnicos ni gestión de usuarios. Licencias y comprobaciones de seguridad siguen vigentes.
 
 ## Cambios desde 1.8.9
 
@@ -74,7 +78,7 @@ fecha, hora, estado o datos de contacto. La ampliación no envía un WhatsApp au
 - Haz copia de la base de datos y de la carpeta del plugin.
 - Si usas WhatsApp, instala primero el add-on 1.0.5 bajo su carpeta instalada.
 - Actualiza reemplazando la carpeta bajo el mismo slug `ov-booking-system`.
-- Comprueba `ov_booking_version=1.9.3` y `ov_booking_db_version=1.8.0`.
+- Comprueba `ov_booking_version=1.9.4` y `ov_booking_db_version=1.8.0`.
 - No desinstales la versión anterior: la desinstalación no es un procedimiento de migración.
 - Prueba en staging la creación pública, la reserva administrativa y dos solicitudes
   simultáneas sobre el último cupo.

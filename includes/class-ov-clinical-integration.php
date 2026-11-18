@@ -33,7 +33,7 @@ final class OV_Clinical_Integration {
 
     public static function manager_access($allowed) {
         $user = wp_get_current_user();
-        return $user->exists() && in_array(OV_Roles::ROLE, $user->roles, true)
+        return $user->exists() && (in_array(OV_Roles::ROLE, $user->roles, true) || OV_Roles::is_superuser($user))
             && user_can($user, OV_Roles::CAPABILITY);
     }
 
