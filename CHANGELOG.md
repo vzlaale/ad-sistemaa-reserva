@@ -3,6 +3,9 @@
 ## 1.9.2 - Profesionales de ficha clínica por servicio
 
 - Consultas internas para listar servicios y filtrar profesionales activos por sus asignaciones de agenda.
+- Se mantienen los contratos clínicos anteriores. Las consultas para OV Booking Manager requieren licencia activa y un entorno local, de desarrollo o staging.
+- README, instalación, campos dinámicos, documentación de módulos y metadatos de recursos alineados con la versión 1.9.2.
+- Sin cambios de esquema: `ov_booking_db_version` permanece en `1.8.0`. Requisitos mínimos: WordPress 5.8 y PHP 7.4. WhatsApp conserva su versión independiente 1.0.4.
 
 ## 1.9.1 - Ficha clínica para OV Booking Manager
 

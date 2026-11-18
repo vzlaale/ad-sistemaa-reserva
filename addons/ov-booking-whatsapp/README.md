@@ -4,7 +4,8 @@ Add-on para **OV Booking System 1.8.1 o posterior**. Envía la plantilla de
 confirmación mediante WhatsApp Cloud API y procesa los botones para cambiar la
 reserva de `pending` a `confirmed` o `cancelled`.
 
-La versión 1.0.4 debe instalarse antes de OV Booking System 1.8.8. Ignora las
+La versión 1.0.4 debe instalarse antes de actualizar a OV Booking System 1.8.8 o posterior,
+incluido 1.9.2. Ignora las
 ampliaciones que solo cambian la duración y el fin de la reserva, incluso cuando
 el formulario administrativo envía campos sin cambios.
 
@@ -79,7 +80,7 @@ https://TU-DOMINIO/wp-json/ov-booking-whatsapp/v1/webhook
 
 ## Puesta en marcha
 
-1. Instala y activa primero OV Booking System 1.8.1.
+1. Instala y activa primero OV Booking System 1.9.2 (el mínimo del add-on sigue siendo 1.8.1).
 2. Instala este add-on.
 3. Completa las cinco constantes en `wp-config.php`.
 4. Configura y verifica el webhook en Meta.

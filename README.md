@@ -1,4 +1,4 @@
-# OV Booking System 1.8.9
+# OV Booking System 1.9.2
 
 Plugin de reservas para WordPress, compatible con Divi y otros temas.
 
@@ -12,25 +12,27 @@ Plugin de reservas para WordPress, compatible con Divi y otros temas.
 - Protección contra solicitudes duplicadas, abuso y carreras de cupo.
 - Opción para que el cliente añada la cita a Google Calendar o descargue `.ics`.
 - Eventos del núcleo y gestor de módulos para add-ons independientes.
+- Contratos internos versionados para integrar Ficha Clínica con pacientes, servicios y profesionales de la agenda.
 
 Google Sheets y su Apps Script fueron retirados en 1.8.0. Una actualización conserva
 columnas históricas existentes, pero el plugin ya no las lee, escribe ni sincroniza.
 
-La versión 1.8.2 añade la consulta del RUT en reservas administrativas y corrige el
-borrado masivo y la reactivación de reservas canceladas. Consulta [CHANGELOG.md](CHANGELOG.md).
-La versión 1.8.3 acota las reservas públicas a seis meses calendario y limita las consultas
-mensuales anónimas. El calendario usa la zona horaria configurada del formulario.
-La versión 1.8.4 precarga los datos de cada consulta mensual y evita las consultas por horario.
-La versión 1.8.5 comparte el límite anónimo entre consultas mensuales y diarias; el calendario
-habilita únicamente las fechas que devuelve el servidor, incluidos horarios especiales.
-La versión 1.8.6 calcula los días laborables de los profesionales en una consulta de lote,
-conservando el campo `working_days` de la configuración pública.
-La versión 1.8.7 permite ampliar una reserva activa desde el editor sin crear otra cita.
-La versión 1.8.8 emite el evento de actualización también al ampliar y protege las
-lecturas públicas de formularios inactivos.
-La versión 1.8.9 corrige la comparación de duraciones al editar: permite guardar
-datos del paciente sin tocar el horario ni ampliar la reserva.
-El esquema de base de datos permanece en 1.8.0.
+## Cambios desde 1.8.9
+
+- **1.9.0:** integración con el add-on Ficha Clínica mediante contratos internos para
+  consultar pacientes y habilitar el enlace desde el detalle de una reserva.
+- **1.9.1:** consultas de pacientes y profesionales para el rol OV Booking Manager.
+- **1.9.2:** listado de servicios activos y selección de profesionales activos asignados
+  a los servicios de cada especialidad, sin duplicados y dentro del mismo formulario.
+
+Las consultas clínicas para OV Booking Manager requieren el módulo `clinical_records`
+habilitado con licencia activa y un entorno `local`, `development` o `staging`. El código
+actual no habilita estas consultas para ese rol en producción. Ficha Clínica se instala
+como add-on separado; los contratos del núcleo no incluyen una ficha clínica completa.
+
+El esquema de base de datos permanece en **1.8.0**. Consulta el historial completo en
+[CHANGELOG.md](CHANGELOG.md) y las firmas de integración en
+[MODULOS-Y-LICENCIAS.md](MODULOS-Y-LICENCIAS.md).
 
 ## Requisitos asumidos
 
@@ -71,7 +73,9 @@ fecha, hora, estado o datos de contacto. La ampliación no envía un WhatsApp au
 ## Actualización segura
 
 - Haz copia de la base de datos y de la carpeta del plugin.
+- Si usas WhatsApp, instala primero el add-on 1.0.4 bajo su carpeta instalada.
 - Actualiza reemplazando la carpeta bajo el mismo slug `ov-booking-system`.
+- Comprueba `ov_booking_version=1.9.2` y `ov_booking_db_version=1.8.0`.
 - No desinstales la versión anterior: la desinstalación no es un procedimiento de migración.
 - Prueba en staging la creación pública, la reserva administrativa y dos solicitudes
   simultáneas sobre el último cupo.
@@ -88,4 +92,9 @@ Los add-ons se instalan como plugins separados y se registran mediante
 La ampliación administrativa emite `ov_booking_reservation_updated` después de guardar.
 Cada add-on decide si los campos modificados requieren una acción; WhatsApp 1.0.4
 ignora los cambios que solo afectan la duración y el fin de la reserva. Actualiza
-ese add-on antes de instalar el núcleo 1.8.8.
+ese add-on antes de actualizar desde un núcleo anterior a 1.8.8 hacia 1.9.2.
+
+Los filtros clínicos `ov_booking_clinical_services_v1` y
+`ov_booking_clinical_professionals_v2` permiten relacionar las especialidades del add-on
+con los servicios y profesionales de la agenda. Conservan los contratos anteriores;
+el add-on debe comprobar la autorización y tratar los resultados `WP_Error`.

@@ -1,6 +1,6 @@
 /**
  * OV Booking System - Frontend JavaScript
- * Version: 1.8.6
+ * Version: 1.9.2
  * Author: Oscar Viedma
  */
 

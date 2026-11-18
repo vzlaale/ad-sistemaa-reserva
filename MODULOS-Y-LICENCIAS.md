@@ -1,4 +1,4 @@
-# Módulos y licencias
+# Módulos y licencias — OV Booking 1.9.2
 
 ## Modelo comercial
 
@@ -52,7 +52,7 @@ add_action('ov_booking_register_modules', function () {
 
 El add-on también debe comprobar `OV_Module_Manager::current_user_can('customers')` antes de mostrar pantallas o procesar solicitudes.
 
-Los módulos con `requires_license=false`, como WhatsApp 1.0.3, aparecen como instalados en el gestor. Su funcionamiento se controla desde los ajustes del propio add-on; la pantalla Módulos no ofrece desactivarlos. Al integrar ambos controles en una versión futura del add-on, se deberá probar la transición con instalaciones ya activas antes de cambiar esta regla.
+Los módulos con `requires_license=false`, como WhatsApp 1.0.4, aparecen como instalados en el gestor. Su funcionamiento se controla desde los ajustes del propio add-on; la pantalla Módulos no ofrece desactivarlos. Al integrar ambos controles en una versión futura del add-on, se deberá probar la transición con instalaciones ya activas antes de cambiar esta regla.
 
 ## Eventos del núcleo
 
@@ -87,6 +87,15 @@ Los add-ons deben mantener sus tablas y migraciones en su propio plugin. El núc
 - `ov_booking_clinical_services_v1` recibe `null` y devuelve los servicios activos como `{id:int, name:string, form_name:string}`.
 - `ov_booking_clinical_professionals_v2` recibe `(null, int[] $service_ids, ?int $id)`. Requiere al menos un ID de servicio. Devuelve los profesionales activos asignados a cualquiera de esos servicios activos del mismo formulario. Con un ID resuelve un único profesional o devuelve `WP_Error` 404.
 - Ambos contratos tienen la misma autorización que la consulta de pacientes v2. El contrato de profesionales v1 sigue disponible.
+
+Las consultas de pacientes v2, profesionales v1/v2 y servicios v1 solo se autorizan
+para usuarios con rol `ov_manager` y capacidad `manage_ov_booking`, con el módulo
+`clinical_records` habilitado y licencia activa, en entornos WordPress `local`,
+`development` o `staging`. En `production` devuelven `WP_Error` 403. Los listados
+devuelven un array vacío si no hay coincidencias y `WP_Error` 503 si falla la consulta
+de base de datos. Las consultas de profesionales rechazan argumentos inválidos con
+400 y un ID individual sin coincidencia con 404. Son filtros internos de servidor;
+no exponen endpoints públicos ni sustituyen los permisos del add-on.
 
 ### Reglas generales
 
