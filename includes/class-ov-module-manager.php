@@ -76,6 +76,7 @@ class OV_Module_Manager {
             'version' => $version,
             'requires' => array('core'),
             'requires_license' => true,
+            'readonly_on_expiry' => false,
             'capability' => 'manage_ov_booking_' . $key,
             'on_enable' => null,
             'on_disable' => null,
@@ -85,6 +86,7 @@ class OV_Module_Manager {
         $definition['key'] = $key;
         $definition['requires'] = array_values(array_filter(array_map('sanitize_key', (array) $definition['requires'])));
         $definition['requires_license'] = (bool) $definition['requires_license'];
+        $definition['readonly_on_expiry'] = (bool) $definition['readonly_on_expiry'];
         $definition['capability'] = sanitize_key($definition['capability']);
 
         self::$modules[$key] = $definition;
@@ -140,7 +142,7 @@ class OV_Module_Manager {
             ? $entitlements[$key]
             : array();
 
-        if (($entitlement['status'] ?? '') !== 'active') {
+        if (!self::entitlement_matches($entitlement) || ($entitlement['status'] ?? '') !== 'active') {
             return false;
         }
 
@@ -155,6 +157,57 @@ class OV_Module_Manager {
         }
 
         return true;
+    }
+
+    public static function license_mode() {
+        $mode = defined('OV_BOOKING_LICENSE_MODE') ? OV_BOOKING_LICENSE_MODE : 'api';
+        return in_array($mode, array('local', 'api'), true) ? $mode : '';
+    }
+
+    private static function entitlement_matches($entitlement) {
+        if (self::license_mode() === 'local') {
+            return ($entitlement['provider'] ?? '') === 'local'
+                && ($entitlement['instance_id'] ?? '') === get_option(self::INSTANCE_ID_OPTION, '')
+                && !empty($entitlement['instance_id'])
+                && ($entitlement['site_url'] ?? '') === home_url('/');
+        }
+        if (self::license_mode() !== 'api' || ($entitlement['provider'] ?? 'api') !== 'api') {
+            return false;
+        }
+        // Never promote the published staging keys into production entitlements.
+        return wp_get_environment_type() !== 'production'
+            || strpos((string) ($entitlement['license_key'] ?? ''), 'TEST-') !== 0;
+    }
+
+    public static function is_readable($key) {
+        if (self::is_enabled($key)) {
+            return true;
+        }
+        $module = self::get_module($key);
+        $entitlement = self::get_entitlement($key);
+        return $module && $module['readonly_on_expiry'] && self::entitlement_matches($entitlement)
+            && !empty($entitlement['activated_once'])
+            && in_array($entitlement['status'] ?? '', array('active', 'inactive'), true);
+    }
+
+    /** Local licenses are administrative grants, never guessed or copied test keys. */
+    public static function activate_local($key, $expires_on) {
+        if (self::license_mode() !== 'local' || !current_user_can('manage_options')) {
+            return new WP_Error('forbidden', __('No tienes permisos para administrar licencias locales.', 'ov-booking-system'));
+        }
+        $module = self::get_module($key);
+        if (!$module || !$module['requires_license']) {
+            return new WP_Error('invalid_module', __('Selecciona un módulo que requiera licencia.', 'ov-booking-system'));
+        }
+        $date = is_string($expires_on) ? DateTimeImmutable::createFromFormat('!Y-m-d', $expires_on, wp_timezone()) : false;
+        if (!$date || $date->format('Y-m-d') !== $expires_on || $date->setTime(23, 59, 59)->getTimestamp() <= time()) {
+            return new WP_Error('invalid_expiration', __('Selecciona una fecha de vencimiento válida, hoy o posterior.', 'ov-booking-system'));
+        }
+        return self::set_enabled($key, array(
+            'status' => 'active', 'provider' => 'local', 'instance_id' => self::get_instance_id(),
+            'site_url' => home_url('/'), 'expires_at' => $date->setTime(23, 59, 59)->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
+            'checked_at' => current_time('mysql', true), 'managed_by' => get_current_user_id(),
+        ));
     }
 
     /**
@@ -184,6 +237,9 @@ class OV_Module_Manager {
      * el navegador: el servidor debe devolver {"valid": true}.
      */
     public static function activate($key, $license_key) {
+        if (self::license_mode() !== 'api') {
+            return new WP_Error('local_license_mode', __('Administra esta licencia local desde Módulos con una cuenta administradora.', 'ov-booking-system'));
+        }
         $module = self::get_module($key);
         $license_key = sanitize_text_field($license_key);
 
@@ -201,6 +257,9 @@ class OV_Module_Manager {
 
         if ($license_key === '') {
             return new WP_Error('empty_license', __('Introduce una licencia válida.', 'ov-booking-system'));
+        }
+        if (wp_get_environment_type() === 'production' && strpos($license_key, 'TEST-') === 0) {
+            return new WP_Error('test_license', __('Las claves de prueba no son válidas en producción.', 'ov-booking-system'));
         }
 
         $api_url = self::get_license_api_url();
@@ -243,6 +302,7 @@ class OV_Module_Manager {
 
         $entitlement = array(
             'status' => 'active',
+            'provider' => 'api',
             'license_key' => $license_key,
             'expires_at' => !empty($payload['expires_at']) ? sanitize_text_field($payload['expires_at']) : '',
             'checked_at' => current_time('mysql', true),
@@ -252,6 +312,9 @@ class OV_Module_Manager {
     }
 
     public static function deactivate($key) {
+        if (!current_user_can(self::license_mode() === 'local' ? 'manage_options' : OV_Roles::CAPABILITY)) {
+            return new WP_Error('forbidden', __('No tienes permisos para modificar esta licencia.', 'ov-booking-system'));
+        }
         $module = self::get_module($key);
         if (!$module) {
             return new WP_Error('unknown_module', __('El módulo no está registrado.', 'ov-booking-system'));
@@ -260,7 +323,7 @@ class OV_Module_Manager {
             return new WP_Error('module_managed_elsewhere', __('Este módulo se configura desde sus propios ajustes.', 'ov-booking-system'));
         }
 
-        $result = self::set_enabled($key, array('status' => 'inactive'));
+        $result = self::set_enabled($key, array('status' => 'inactive', 'managed_by' => get_current_user_id(), 'checked_at' => current_time('mysql', true)));
         if (!is_wp_error($result)) {
             if (is_callable($module['on_disable'])) {
                 call_user_func($module['on_disable']);
@@ -285,20 +348,49 @@ class OV_Module_Manager {
             }
         }
 
-        $entitlements = get_option(self::ENTITLEMENTS_OPTION, array());
-        $entitlements[$key] = $entitlement;
-        update_option(self::ENTITLEMENTS_OPTION, $entitlements, false);
-
-        if (($entitlement['status'] ?? '') === 'active' && is_callable($module['on_enable'])) {
-            $callback_result = call_user_func($module['on_enable']);
-            if (is_wp_error($callback_result)) {
-                $entitlements[$key]['status'] = 'inactive';
-                update_option(self::ENTITLEMENTS_OPTION, $entitlements, false);
-                return $callback_result;
-            }
+        global $wpdb;
+        $lock = 'ov_license_' . substr(hash('sha256', DB_NAME . ':' . $wpdb->prefix), 0, 48);
+        if ((int) $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s, 5)', $lock)) !== 1) {
+            return new WP_Error('license_busy', __('Otra solicitud está actualizando licencias. Reintenta.', 'ov-booking-system'));
         }
-
-        return true;
+        try {
+            wp_cache_delete(self::ENTITLEMENTS_OPTION, 'options');
+            $original = (array) get_option(self::ENTITLEMENTS_OPTION, array());
+            $previous = $original[$key] ?? array();
+            if (($entitlement['status'] ?? '') === 'inactive') {
+                $entitlement = array_merge($previous, $entitlement);
+            }
+            $entitlements = $original;
+            $entitlements[$key] = $entitlement;
+            if (!update_option(self::ENTITLEMENTS_OPTION, $entitlements, false) && get_option(self::ENTITLEMENTS_OPTION) !== $entitlements) {
+                return new WP_Error('license_storage', __('No se pudo guardar la licencia.', 'ov-booking-system'));
+            }
+            if (($entitlement['status'] ?? '') === 'active' && is_callable($module['on_enable'])) {
+                $callback_result = call_user_func($module['on_enable']);
+                if (is_wp_error($callback_result)) {
+                    update_option(self::ENTITLEMENTS_OPTION, $original, false);
+                    return $callback_result;
+                }
+            }
+            if (($entitlement['status'] ?? '') === 'active') {
+                $entitlement['activated_once'] = !empty($previous['activated_once']) || empty($entitlement['expires_at'])
+                    || strtotime($entitlement['expires_at']) > time();
+                $entitlement['activated_at'] = current_time('mysql', true);
+                $entitlements[$key] = $entitlement;
+                if (!update_option(self::ENTITLEMENTS_OPTION, $entitlements, false) && get_option(self::ENTITLEMENTS_OPTION) !== $entitlements) {
+                    update_option(self::ENTITLEMENTS_OPTION, $original, false);
+                    return new WP_Error('license_storage', __('No se pudo confirmar la licencia.', 'ov-booking-system'));
+                }
+            }
+            return true;
+        } catch (Throwable $error) {
+            if (isset($original)) {
+                update_option(self::ENTITLEMENTS_OPTION, $original, false);
+            }
+            return new WP_Error('license_storage', __('No se pudo completar el cambio de licencia. Reintenta.', 'ov-booking-system'));
+        } finally {
+            $wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)', $lock));
+        }
     }
 
     private static function ensure_capability($capability) {
@@ -320,6 +412,9 @@ class OV_Module_Manager {
         if (!$instance_id) {
             $instance_id = wp_generate_uuid4();
             add_option(self::INSTANCE_ID_OPTION, $instance_id, '', false);
+            wp_cache_delete(self::INSTANCE_ID_OPTION, 'options');
+            wp_cache_delete('notoptions', 'options');
+            $instance_id = get_option(self::INSTANCE_ID_OPTION);
         }
 
         return $instance_id;
@@ -339,16 +434,23 @@ class OV_Module_Manager {
     }
 
     private static function handle_request($action) {
-        if (!current_user_can(OV_Roles::CAPABILITY)) {
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+            wp_die(esc_html__('Método no permitido.', 'ov-booking-system'), '', array('response' => 405));
+        }
+        if (!current_user_can(self::license_mode() === 'local' ? 'manage_options' : OV_Roles::CAPABILITY)) {
             wp_die(esc_html__('No tienes permisos para modificar módulos.', 'ov-booking-system'), '', array('response' => 403));
         }
 
         check_admin_referer('ov_booking_module_' . $action);
 
         $key = isset($_POST['module_key']) ? sanitize_key(wp_unslash($_POST['module_key'])) : '';
-        $result = $action === 'activate'
-            ? self::activate($key, isset($_POST['license_key']) ? wp_unslash($_POST['license_key']) : '')
-            : self::deactivate($key);
+        if ($action === 'activate' && self::license_mode() === 'local') {
+            $result = self::activate_local($key, isset($_POST['expires_on']) ? wp_unslash($_POST['expires_on']) : '');
+        } else {
+            $result = $action === 'activate'
+                ? self::activate($key, isset($_POST['license_key']) ? wp_unslash($_POST['license_key']) : '')
+                : self::deactivate($key);
+        }
 
         $args = array(
             'page' => 'ov-booking-modules',

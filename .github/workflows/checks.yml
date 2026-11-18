@@ -1,0 +1,21 @@
+name: Checks
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['7.4', '8.3']
+    container: php:${{ matrix.php }}-cli
+    steps:
+      - uses: actions/checkout@v6
+      - run: find . -path ./.git -prune -o -name '*.php' -print0 | xargs -0 -n 1 php -l
