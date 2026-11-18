@@ -398,10 +398,10 @@ class OV_Module_Manager {
             return;
         }
 
-        $roles = array('administrator', OV_Roles::ROLE);
+        $roles = array('administrator', OV_Roles::ROLE, OV_Roles::SUPERUSER_ROLE);
         foreach ($roles as $role_name) {
             $role = get_role($role_name);
-            if ($role) {
+            if ($role && !$role->has_cap($capability)) {
                 $role->add_cap($capability);
             }
         }
